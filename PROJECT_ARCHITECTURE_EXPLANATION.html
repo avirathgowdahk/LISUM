@@ -1,0 +1,1667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PROJECT ARCHITECTURE | AI Multimodal Video Summarizer</title>
+    <style>
+        /* ==========================================================================
+           COLOR PALETTE & DESIGN SYSTEM (Modern Dark Theme)
+           ========================================================================== */
+        :root {
+            --bg-dark: #07090e;
+            --bg-card: rgba(15, 23, 42, 0.75);
+            --bg-card-hover: rgba(30, 41, 59, 0.9);
+            --bg-element: rgba(255, 255, 255, 0.04);
+            
+            --cyan: #38bdf8;
+            --blue: #3b82f6;
+            --indigo: #6366f1;
+            --purple: #a855f7;
+            --pink: #ec4899;
+            --emerald: #10b981;
+            --amber: #f59e0b;
+            --rose: #f43f5e;
+            
+            --text-main: #f8fafc;
+            --text-sub: #94a3b8;
+            --text-dim: #64748b;
+            
+            --border: rgba(255, 255, 255, 0.08);
+            --border-glow: rgba(56, 189, 248, 0.4);
+            --radius-lg: 18px;
+            --radius-md: 12px;
+            --radius-sm: 8px;
+            
+            --shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5);
+            --glow-cyan: 0 0 25px rgba(56, 189, 248, 0.2);
+            --glow-purple: 0 0 25px rgba(168, 85, 247, 0.2);
+            
+            --font: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        /* Reset & Base */
+        * { box-sizing: border-box; margin: 0; padding: 0; scroll-behavior: smooth; }
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: var(--font);
+            line-height: 1.5;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 10% 10%, rgba(56, 189, 248, 0.06) 0%, transparent 40%),
+                radial-gradient(circle at 90% 90%, rgba(168, 85, 247, 0.06) 0%, transparent 40%);
+            background-attachment: fixed;
+            padding-bottom: 60px;
+        }
+
+        /* Top Reading Progress Bar */
+        #progress-bar {
+            position: fixed; top: 0; left: 0; height: 4px;
+            background: linear-gradient(90deg, var(--cyan), var(--purple), var(--emerald));
+            width: 0%; z-index: 1000; transition: width 0.1s;
+        }
+
+        .container { max-width: 1350px; margin: 0 auto; padding: 0 24px; }
+
+        /* ==========================================================================
+           HEADER & NAV BAR
+           ========================================================================== */
+        .navbar {
+            position: sticky; top: 0; z-index: 900;
+            background: rgba(7, 9, 14, 0.88);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 0;
+        }
+        .nav-content { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+        .logo {
+            font-size: 1.1rem; font-weight: 800; color: #fff; text-decoration: none;
+            display: flex; align-items: center; gap: 10px;
+            background: linear-gradient(135deg, var(--cyan), var(--purple));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .nav-menu { display: flex; gap: 8px; overflow-x: auto; white-space: nowrap; }
+        .nav-item {
+            color: var(--text-sub); text-decoration: none; font-size: 0.82rem; font-weight: 600;
+            padding: 6px 12px; border-radius: var(--radius-sm); transition: 0.2s;
+        }
+        .nav-item:hover, .nav-item.active { color: #fff; background: var(--bg-element); }
+        
+        .search-box { position: relative; width: 180px; }
+        .search-box input {
+            width: 100%; padding: 6px 12px 6px 30px;
+            background: var(--bg-element); border: 1px solid var(--border);
+            border-radius: 20px; color: #fff; font-size: 0.8rem; outline: none;
+        }
+        .search-box input:focus { border-color: var(--cyan); box-shadow: 0 0 10px rgba(56, 189, 248, 0.2); }
+        .search-box svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 13px; fill: var(--text-dim); }
+
+        .btn-guide {
+            background: linear-gradient(135deg, var(--purple), var(--indigo));
+            color: #fff; border: none; padding: 7px 16px; border-radius: 20px;
+            font-size: 0.82rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px;
+            box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3); transition: 0.2s; white-space: nowrap;
+        }
+        .btn-guide:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(168, 85, 247, 0.5); }
+
+        /* ==========================================================================
+           PRESENTATION MODE FLOATING CONTROLS
+           ========================================================================== */
+        .pres-controls {
+            display: none; position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+            z-index: 950; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(16px);
+            border: 1.5px solid var(--cyan); border-radius: 40px; padding: 10px 24px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.8), var(--glow-cyan);
+            align-items: center; gap: 16px;
+        }
+        .pres-controls.active { display: flex; }
+        .pres-btn {
+            background: rgba(255,255,255,0.1); border: 1px solid var(--border); color: #fff;
+            padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 0.82rem; font-weight: 700;
+        }
+        .pres-btn:hover { background: var(--cyan); color: #000; }
+        .pres-info { font-size: 0.88rem; font-weight: 700; color: var(--cyan); min-width: 130px; text-align: center; }
+
+        .highlight-node {
+            outline: 3px solid var(--cyan) !important;
+            box-shadow: 0 0 35px rgba(56, 189, 248, 0.5) !important;
+            transform: scale(1.03) !important;
+        }
+
+        /* ==========================================================================
+           HERO SECTION
+           ========================================================================== */
+        .hero { text-align: center; padding: 40px 0 30px; }
+        .hero-title {
+            font-size: 2.5rem; font-weight: 900; letter-spacing: -0.02em; line-height: 1.2;
+            background: linear-gradient(135deg, #fff 0%, var(--cyan) 50%, var(--purple) 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 12px;
+        }
+        .hero-sub { font-size: 1.1rem; color: var(--text-sub); max-width: 750px; margin: 0 auto 24px; }
+        
+        .pills-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-bottom: 30px; }
+        .pill {
+            background: var(--bg-card); border: 1px solid var(--border); color: var(--cyan);
+            padding: 5px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; display: flex; align-items: center; gap: 6px;
+        }
+        .pill span { color: var(--text-sub); font-weight: 400; }
+
+        /* 60-Second Quick Pitch (Visual Card Grid) */
+        .pitch-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.95));
+            border: 1px solid var(--purple); border-radius: var(--radius-lg); padding: 24px;
+            max-width: 1000px; margin: 0 auto; text-align: left; box-shadow: var(--shadow), var(--glow-purple);
+        }
+        .pitch-head { display: flex; align-items: center; gap: 8px; color: var(--purple); font-weight: 800; font-size: 0.9rem; text-transform: uppercase; margin-bottom: 16px; letter-spacing: 0.05em; }
+        .pitch-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+        .pitch-step { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 14px; }
+        .pitch-num { font-size: 0.75rem; font-weight: 800; color: var(--cyan); margin-bottom: 4px; }
+        .pitch-title { font-size: 0.95rem; font-weight: 700; color: #fff; margin-bottom: 6px; }
+        .pitch-text { font-size: 0.82rem; color: var(--text-sub); line-height: 1.4; }
+
+        /* ==========================================================================
+           SECTION COMMON STYLES
+           ========================================================================== */
+        section { padding: 40px 0; border-bottom: 1px solid var(--border); }
+        .sec-head { margin-bottom: 28px; }
+        .sec-tag { color: var(--cyan); font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px; display: block; }
+        .sec-title { font-size: 1.75rem; font-weight: 800; color: #fff; }
+        .sec-desc { color: var(--text-sub); font-size: 0.92rem; margin-top: 4px; }
+
+        .glass-box {
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg);
+            padding: 24px; transition: 0.2s; position: relative;
+        }
+        .glass-box:hover { border-color: rgba(56, 189, 248, 0.3); transform: translateY(-2px); box-shadow: var(--shadow); }
+
+        /* ==========================================================================
+           SYSTEM AT A GLANCE (VISUAL STEP PIPELINE)
+           ========================================================================== */
+        .glance-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+        .glance-card {
+            background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border); border-radius: var(--radius-md);
+            padding: 16px 12px; text-align: center; position: relative; transition: 0.2s;
+        }
+        .glance-card:hover { border-color: var(--cyan); background: rgba(30, 41, 59, 0.9); }
+        .glance-icon { font-size: 1.8rem; margin-bottom: 8px; }
+        .glance-name { font-size: 0.85rem; font-weight: 800; color: #fff; margin-bottom: 4px; }
+        .glance-tech { font-size: 0.72rem; color: var(--cyan); font-weight: 600; }
+
+        /* ==========================================================================
+           SVG DIAGRAM CONTAINERS & GRAPHICS
+           ========================================================================== */
+        .svg-container {
+            background: rgba(15, 23, 42, 0.9); border: 1px solid var(--border);
+            border-radius: var(--radius-lg); padding: 20px; text-align: center;
+            margin-bottom: 28px; box-shadow: var(--shadow); overflow-x: auto;
+        }
+        .svg-container svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+
+        /* ==========================================================================
+           MASTER INTERACTIVE FLOWCHART NODES
+           ========================================================================== */
+        .flow-container { display: flex; flex-direction: column; gap: 14px; max-width: 1050px; margin: 0 auto; }
+        .flow-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.85), rgba(15, 23, 42, 0.95));
+            border: 1px solid var(--border); border-left: 5px solid var(--cyan);
+            border-radius: var(--radius-md); padding: 16px 20px; cursor: pointer;
+            display: flex; align-items: center; justify-content: space-between; gap: 16px; transition: 0.2s;
+        }
+        .flow-card:hover { border-color: var(--cyan); background: rgba(30, 41, 59, 1); transform: translateX(6px); box-shadow: var(--glow-cyan); }
+        
+        .flow-left { display: flex; align-items: center; gap: 14px; }
+        .flow-badge {
+            font-size: 0.75rem; font-weight: 900; color: var(--cyan);
+            background: rgba(56, 189, 248, 0.12); padding: 6px 12px; border-radius: 20px; white-space: nowrap;
+        }
+        .flow-info-title { font-size: 1rem; font-weight: 800; color: #fff; }
+        .flow-info-sub { font-size: 0.82rem; color: var(--text-sub); margin-top: 2px; }
+        
+        .flow-right { display: flex; align-items: center; gap: 10px; }
+        .flow-tag { font-size: 0.75rem; font-weight: 700; color: var(--purple); background: rgba(168, 85, 247, 0.12); padding: 4px 10px; border-radius: 6px; }
+        .flow-click-hint { font-size: 0.75rem; color: var(--cyan); font-weight: 700; display: flex; align-items: center; gap: 4px; }
+
+        .flow-arrow-down { text-align: center; color: var(--cyan); font-size: 1.3rem; margin: -4px 0; opacity: 0.8; }
+
+        /* Color variants for flowchart blocks */
+        .color-pre { border-left-color: var(--cyan); }
+        .color-ai  { border-left-color: var(--purple); }
+        .color-opt { border-left-color: var(--amber); }
+        .color-mm  { border-left-color: var(--emerald); }
+        .color-out { border-left-color: var(--pink); }
+
+        /* ==========================================================================
+           EXPANDABLE NODE EXPLANATION MODAL
+           ========================================================================== */
+        .modal-bg {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
+            z-index: 1100; justify-content: center; align-items: center; padding: 20px;
+        }
+        .modal-bg.active { display: flex; }
+        .modal-card {
+            background: #0f172a; border: 1.5px solid var(--cyan); border-radius: var(--radius-lg);
+            max-width: 750px; width: 100%; max-height: 90vh; overflow-y: auto; padding: 28px;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.9), var(--glow-cyan); position: relative;
+        }
+        .modal-close-btn {
+            position: absolute; top: 18px; right: 18px; background: rgba(255,255,255,0.1); border: none;
+            color: #fff; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 1.2rem;
+            display: flex; align-items: center; justify-content: center; transition: 0.2s;
+        }
+        .modal-close-btn:hover { background: var(--rose); }
+        
+        .modal-head-title { font-size: 1.4rem; font-weight: 800; color: var(--cyan); margin-bottom: 20px; padding-right: 40px; }
+        
+        .modal-grid-details { display: grid; gap: 14px; }
+        .modal-box-item { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 14px; }
+        .modal-box-label { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; color: var(--purple); letter-spacing: 0.05em; margin-bottom: 4px; }
+        .modal-box-val { font-size: 0.9rem; color: var(--text-main); line-height: 1.5; }
+
+        /* ==========================================================================
+           MODULES GRID CARDS
+           ========================================================================== */
+        .modules-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 20px; }
+        .mod-card { display: flex; flex-direction: column; justify-content: space-between; }
+        .mod-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+        .mod-title { font-size: 1.05rem; font-weight: 800; color: #fff; }
+        .mod-file { font-family: monospace; font-size: 0.78rem; color: var(--cyan); background: rgba(56, 189, 248, 0.12); padding: 3px 8px; border-radius: 4px; display: inline-block; margin-bottom: 10px; }
+        .mod-bullets { font-size: 0.85rem; color: var(--text-sub); margin-bottom: 14px; list-style-type: none; }
+        .mod-bullets li { position: relative; padding-left: 16px; margin-bottom: 4px; }
+        .mod-bullets li::before { content: "•"; position: absolute; left: 0; color: var(--cyan); font-weight: bold; }
+        
+        .mod-io { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; background: rgba(0,0,0,0.3); padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--border); font-size: 0.78rem; }
+        .mod-io-label { color: var(--text-dim); font-size: 0.68rem; text-transform: uppercase; font-weight: 700; }
+        .mod-io-val { color: #fff; font-weight: 600; }
+
+        /* ==========================================================================
+           TECH STACK VISUAL CARDS
+           ========================================================================== */
+        .tech-cat { margin-bottom: 24px; }
+        .tech-cat-title { font-size: 1.1rem; font-weight: 800; color: var(--cyan); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .tech-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+        .tech-box { background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 16px; }
+        .tech-name { font-size: 1rem; font-weight: 800; color: #fff; margin-bottom: 4px; }
+        .tech-role { font-size: 0.8rem; color: var(--purple); font-weight: 700; margin-bottom: 6px; }
+        .tech-desc { font-size: 0.82rem; color: var(--text-sub); }
+
+        /* ==========================================================================
+           AI PIPELINE VISUAL CARDS & DIAGRAMS
+           ========================================================================== */
+        .ai-flow-card { background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 18px; margin-bottom: 16px; }
+        .ai-step-title { font-size: 1rem; font-weight: 800; color: var(--cyan); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+        .ai-code-block { background: rgba(0,0,0,0.4); border: 1px solid var(--border); padding: 10px 14px; border-radius: var(--radius-sm); font-family: monospace; font-size: 0.82rem; color: var(--purple); margin: 8px 0; }
+
+        /* ==========================================================================
+           FOLDER TREE VISUAL EXPLORER
+           ========================================================================== */
+        .tree-box { background: rgba(7, 9, 14, 0.9); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 20px; font-family: monospace; font-size: 0.85rem; color: var(--text-sub); line-height: 1.8; }
+        .tree-folder { color: var(--cyan); font-weight: bold; }
+        .tree-file { color: #fff; }
+        .tree-note { color: var(--text-dim); font-style: italic; }
+
+        /* ==========================================================================
+           GLOSSARY VISUAL CARDS
+           ========================================================================== */
+        .glossary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+        .gloss-card { background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 14px; }
+        .gloss-term { font-size: 0.95rem; font-weight: 800; color: var(--cyan); margin-bottom: 4px; }
+        .gloss-def { font-size: 0.82rem; color: var(--text-sub); }
+
+        /* Back to top float button */
+        .btn-top {
+            position: fixed; bottom: 24px; right: 24px; background: var(--bg-card); border: 1px solid var(--border);
+            color: #fff; width: 42px; height: 42px; border-radius: 50%; cursor: pointer; display: flex;
+            align-items: center; justify-content: center; box-shadow: var(--shadow); transition: 0.2s; z-index: 800;
+        }
+        .btn-top:hover { background: var(--cyan); color: #000; }
+    </style>
+</head>
+<body>
+
+    <!-- Reading Progress Bar -->
+    <div id="progress-bar"></div>
+
+    <!-- Sticky Navigation Header -->
+    <header class="navbar">
+        <div class="container nav-content">
+            <a href="#" class="logo">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                AI Video Architecture
+            </a>
+            <nav class="nav-menu">
+                <a href="#overview" class="nav-item">At A Glance</a>
+                <a href="#diagrams" class="nav-item">Visual Diagrams</a>
+                <a href="#flowchart" class="nav-item">Master Flowchart</a>
+                <a href="#modules" class="nav-item">Modules Grid</a>
+                <a href="#techstack" class="nav-item">Tech Stack</a>
+                <a href="#ai-engine" class="nav-item">AI Engine</a>
+                <a href="#multimodal" class="nav-item">Multimodal</a>
+                <a href="#folders" class="nav-item">Folder Tree</a>
+            </nav>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <div class="search-box">
+                    <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                    <input type="text" id="search-input" placeholder="Search project...">
+                </div>
+                <button class="btn-guide" id="btn-guide-toggle">🎤 Guide Mode</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Presentation Controls (Floating) -->
+    <div class="pres-controls" id="pres-bar">
+        <button class="pres-btn" id="pres-prev">← Prev</button>
+        <div class="pres-info" id="pres-text">Step 1 of 13</div>
+        <button class="pres-btn" id="pres-next">Next →</button>
+        <button class="pres-btn" id="pres-exit" style="background:rgba(244,63,94,0.2); border-color:var(--rose);">Exit</button>
+    </div>
+
+    <main class="container">
+
+        <!-- Hero Title -->
+        <section class="hero">
+            <h1 class="hero-title">AI MULTIMODAL VIDEO-TO-VIDEO<br>SUMMARIZATION SYSTEM</h1>
+            <p class="hero-sub">Complete Project Architecture & Visual Workflow Diagrammatic Guide</p>
+            
+            <div class="pills-row">
+                <div class="pill">🎥 OpenCV <span>Sampling & Shots</span></div>
+                <div class="pill">🧠 ResNet-50 <span>2048-dim CNN</span></div>
+                <div class="pill">⚡ Transformer <span>3-Layer PyTorch</span></div>
+                <div class="pill">🎯 Knapsack DP <span>Duration Budget</span></div>
+                <div class="pill">🎙️ Whisper <span>Speech-to-Text</span></div>
+                <div class="pill">🌐 Translator <span>6 Languages</span></div>
+                <div class="pill">🔊 gTTS / pyttsx3 <span>AI Speech</span></div>
+                <div class="pill">🎬 FFmpeg <span>Render & Subtitles</span></div>
+            </div>
+
+            <!-- 60-Second Quick Pitch (Visual Cards) -->
+            <div class="pitch-card">
+                <div class="pitch-head">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    60-Second Explanation for Project Guide Presentation
+                </div>
+                <div class="pitch-grid">
+                    <div class="pitch-step">
+                        <div class="pitch-num">01. INGESTION</div>
+                        <div class="pitch-title">Upload or URL</div>
+                        <div class="pitch-text">Reads video file or YouTube URL via yt-dlp with SSRF security validation.</div>
+                    </div>
+                    <div class="pitch-step">
+                        <div class="pitch-num">02. VISUAL AI</div>
+                        <div class="pitch-title">ResNet-50 + Transformer</div>
+                        <div class="pitch-text">Extracts 2048-dim features, detects shots via HSV histograms, and predicts frame scores.</div>
+                    </div>
+                    <div class="pitch-step">
+                        <div class="pitch-num">03. OPTIMIZATION</div>
+                        <div class="pitch-title">0/1 Knapsack DP</div>
+                        <div class="pitch-text">Selects highest-scoring shots fitting into user's target summary duration budget.</div>
+                    </div>
+                    <div class="pitch-step">
+                        <div class="pitch-num">04. MULTIMODAL AI</div>
+                        <div class="pitch-title">Speech + Subtitles + Render</div>
+                        <div class="pitch-text">Whisper STT ➔ Text Summary ➔ Translation ➔ Audio Speech ➔ SRT Subtitles ➔ FFmpeg Video.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 1: System At A Glance -->
+        <section id="overview">
+            <div class="sec-head">
+                <span class="sec-tag">01. Quick Summary</span>
+                <h2 class="sec-title">System Pipeline at a Glance</h2>
+                <p class="sec-desc">How long input videos are processed into compact, narrated multimodal summary outputs.</p>
+            </div>
+
+            <div class="glance-grid">
+                <div class="glance-card">
+                    <div class="glance-icon">📥</div>
+                    <div class="glance-name">1. Video Input</div>
+                    <div class="glance-tech">Upload / URL (yt-dlp)</div>
+                </div>
+                <div class="glance-card">
+                    <div class="glance-icon">🎬</div>
+                    <div class="glance-name">2. Scene Detection</div>
+                    <div class="glance-tech">OpenCV HSV Histograms</div>
+                </div>
+                <div class="glance-card">
+                    <div class="glance-icon">👁️</div>
+                    <div class="glance-name">3. Visual Features</div>
+                    <div class="glance-tech">ResNet-50 (2048-dim)</div>
+                </div>
+                <div class="glance-card">
+                    <div class="glance-icon">🧠</div>
+                    <div class="glance-name">4. Temporal AI</div>
+                    <div class="glance-tech">PyTorch Transformer</div>
+                </div>
+                <div class="glance-card">
+                    <div class="glance-icon">🎯</div>
+                    <div class="glance-name">5. Knapsack DP</div>
+                    <div class="glance-tech">Duration Selection</div>
+                </div>
+                <div class="glance-card">
+                    <div class="glance-icon">🎙️</div>
+                    <div class="glance-name">6. Whisper STT</div>
+                    <div class="glance-tech">Speech Transcription</div>
+                </div>
+                <div class="glance-card">
+                    <div class="glance-icon">🌐</div>
+                    <div class="glance-name">7. Translation</div>
+                    <div class="glance-tech">EN, HI, KN, TA, TE, ML</div>
+                </div>
+                <div class="glance-card">
+                    <div class="glance-icon">🔊</div>
+                    <div class="glance-name">8. AI Speech & SRT</div>
+                    <div class="glance-tech">gTTS + SRT Subtitles</div>
+                </div>
+                <div class="glance-card" style="border-color:var(--emerald); background:rgba(16,185,129,0.1);">
+                    <div class="glance-icon">🎥</div>
+                    <div class="glance-name" style="color:var(--emerald);">9. Final Summary</div>
+                    <div class="glance-tech">FFmpeg Render MP4</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Visual High-Res SVG System Architecture Diagram -->
+        <section id="diagrams">
+            <div class="sec-head">
+                <span class="sec-tag">02. Architectural Diagrams</span>
+                <h2 class="sec-title">Visual End-to-End System Architecture</h2>
+                <p class="sec-desc">Comprehensive visual diagram showing how all components interact step-by-step.</p>
+            </div>
+
+            <div class="svg-container">
+                <!-- Master Architectural Flow SVG -->
+                <svg viewBox="0 0 1200 480" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="grad-cyan" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#0284c7"/>
+                            <stop offset="100%" stop-color="#38bdf8"/>
+                        </linearGradient>
+                        <linearGradient id="grad-purple" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#7e22ce"/>
+                            <stop offset="100%" stop-color="#a855f7"/>
+                        </linearGradient>
+                        <linearGradient id="grad-amber" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#d97706"/>
+                            <stop offset="100%" stop-color="#f59e0b"/>
+                        </linearGradient>
+                        <linearGradient id="grad-emerald" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#059669"/>
+                            <stop offset="100%" stop-color="#10b981"/>
+                        </linearGradient>
+                    </defs>
+
+                    <!-- Background Grid -->
+                    <rect width="1200" height="480" fill="#0f172a" rx="16"/>
+                    
+                    <!-- Title -->
+                    <text x="600" y="35" text-anchor="middle" fill="#38bdf8" font-size="18" font-weight="bold">MASTER AI MULTIMODAL VIDEO SUMMARIZATION ARCHITECTURE</text>
+
+                    <!-- Stage 1: Ingestion & Preprocessing -->
+                    <g transform="translate(40, 70)">
+                        <rect width="200" height="370" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5" rx="12"/>
+                        <text x="100" y="30" text-anchor="middle" fill="#38bdf8" font-size="14" font-weight="bold">1. INGESTION & PRE</text>
+                        
+                        <!-- Box 1 -->
+                        <rect x="15" y="50" width="170" height="60" fill="#0f172a" stroke="#334155" rx="8"/>
+                        <text x="100" y="75" text-anchor="middle" fill="#fff" font-size="12" font-weight="bold">Video Upload / URL</text>
+                        <text x="100" y="95" text-anchor="middle" fill="#94a3b8" font-size="10">yt-dlp + SSRF Check</text>
+                        
+                        <!-- Arrow -->
+                        <path d="M 100 110 L 100 130" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrow)"/>
+                        
+                        <!-- Box 2 -->
+                        <rect x="15" y="130" width="170" height="60" fill="#0f172a" stroke="#334155" rx="8"/>
+                        <text x="100" y="155" text-anchor="middle" fill="#fff" font-size="12" font-weight="bold">Metadata Parsing</text>
+                        <text x="100" y="175" text-anchor="middle" fill="#94a3b8" font-size="10">FPS, Duration, Res</text>
+                        
+                        <!-- Arrow -->
+                        <path d="M 100 190 L 100 210" stroke="#38bdf8" stroke-width="2"/>
+                        
+                        <!-- Box 3 -->
+                        <rect x="15" y="210" width="170" height="60" fill="#0f172a" stroke="#334155" rx="8"/>
+                        <text x="100" y="235" text-anchor="middle" fill="#fff" font-size="12" font-weight="bold">2 FPS Downsampling</text>
+                        <text x="100" y="255" text-anchor="middle" fill="#94a3b8" font-size="10">OpenCV Stride Grid</text>
+
+                        <!-- Arrow -->
+                        <path d="M 100 270 L 100 290" stroke="#38bdf8" stroke-width="2"/>
+
+                        <!-- Box 4 -->
+                        <rect x="15" y="290" width="170" height="60" fill="#0f172a" stroke="#334155" rx="8"/>
+                        <text x="100" y="315" text-anchor="middle" fill="#fff" font-size="12" font-weight="bold">Shot Boundary Cuts</text>
+                        <text x="100" y="335" text-anchor="middle" fill="#94a3b8" font-size="10">HSV Color Histograms</text>
+                    </g>
+
+                    <!-- Connector Line 1->2 -->
+                    <path d="M 240 255 L 280 255" stroke="#38bdf8" stroke-width="3" fill="none"/>
+
+                    <!-- Stage 2: AI Feature & Temporal Model -->
+                    <g transform="translate(280, 70)">
+                        <rect width="220" height="370" fill="#1e293b" stroke="#a855f7" stroke-width="1.5" rx="12"/>
+                        <text x="110" y="30" text-anchor="middle" fill="#a855f7" font-size="14" font-weight="bold">2. VISUAL AI ENGINE</text>
+                        
+                        <!-- Box 1 -->
+                        <rect x="15" y="60" width="190" height="70" fill="#0f172a" stroke="#334155" rx="8"/>
+                        <text x="105" y="85" text-anchor="middle" fill="#fff" font-size="12" font-weight="bold">ResNet-50 Feature Extractor</text>
+                        <text x="105" y="105" text-anchor="middle" fill="#a855f7" font-size="11" font-weight="bold">2048-dim Feature Vectors</text>
+                        <text x="105" y="120" text-anchor="middle" fill="#94a3b8" font-size="9">Disk Cached (.npy)</text>
+
+                        <!-- Arrow -->
+                        <path d="M 105 130 L 105 160" stroke="#a855f7" stroke-width="2"/>
+
+                        <!-- Box 2 -->
+                        <rect x="15" y="160" width="190" height="80" fill="#0f172a" stroke="#334155" rx="8"/>
+                        <text x="105" y="185" text-anchor="middle" fill="#fff" font-size="12" font-weight="bold">Temporal Transformer</text>
+                        <text x="105" y="205" text-anchor="middle" fill="#a855f7" font-size="10">3-Layer PyTorch Encoder</text>
+                        <text x="105" y="220" text-anchor="middle" fill="#94a3b8" font-size="9">Sinusoidal Positional Encoding</text>
+
+                        <!-- Arrow -->
+                        <path d="M 105 240 L 105 270" stroke="#a855f7" stroke-width="2"/>
+
+                        <!-- Box 3 -->
+                        <rect x="15" y="270" width="190" height="70" fill="#0f172a" stroke="#334155" rx="8"/>
+                        <text x="105" y="295" text-anchor="middle" fill="#fff" font-size="12" font-weight="bold">Visual Diversity Penalty</text>
+                        <text x="105" y="315" text-anchor="middle" fill="#94a3b8" font-size="10">Cosine Similarity (λ = 0.3)</text>
+                    </g>
+
+                    <!-- Connector Line 2->3 -->
+                    <path d="M 500 255 L 540 255" stroke="#a855f7" stroke-width="3" fill="none"/>
+
+                    <!-- Stage 3: Duration Optimization (Knapsack) -->
+                    <g transform="translate(540, 70)">
+                        <rect width="180" height="370" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5" rx="12"/>
+                        <text x="90" y="30" text-anchor="middle" fill="#f59e0b" font-size="14" font-weight="bold">3. KNAPSACK DP</text>
+
+                        <rect x="15" y="90" width="150" height="190" fill="#0f172a" stroke="#334155" rx="8"/>
+                        <text x="90" y="120" text-anchor="middle" fill="#fff" font-size="13" font-weight="bold">0/1 Knapsack DP</text>
+                        <text x="90" y="145" text-anchor="middle" fill="#f59e0b" font-size="11" font-weight="bold">Target Duration</text>
+                        <text x="90" y="165" text-anchor="middle" fill="#f59e0b" font-size="11" font-weight="bold">Constraint Budget</text>
+                        
+                        <text x="90" y="200" text-anchor="middle" fill="#94a3b8" font-size="10">Maximizes Importance</text>
+                        <text x="90" y="220" text-anchor="middle" fill="#94a3b8" font-size="10">DP Table DP[i][w]</text>
+                        <text x="90" y="240" text-anchor="middle" fill="#10b981" font-size="10" font-weight="bold">Optimal Shot Subset</text>
+                    </g>
+
+                    <!-- Connector Line 3->4 -->
+                    <path d="M 720 255 L 760 255" stroke="#f59e0b" stroke-width="3" fill="none"/>
+
+                    <!-- Stage 4: Multimodal Speech & NLP -->
+                    <g transform="translate(760, 70)">
+                        <rect width="210" height="370" fill="#1e293b" stroke="#10b981" stroke-width="1.5" rx="12"/>
+                        <text x="105" y="30" text-anchor="middle" fill="#10b981" font-size="14" font-weight="bold">4. MULTIMODAL AI</text>
+
+                        <!-- Box 1 -->
+                        <rect x="15" y="50" width="180" height="60" fill="#0f172a" stroke="#334155" rx="8"/>
+                        <text x="105" y="75" text-anchor="middle" fill="#fff" font-size="12" font-weight="bold">Whisper STT ASR</text>
+                        <text x="105" y="95" text-anchor="middle" fill="#94a3b8" font-size="10">Audio Speech Transcript</text>
+
+                        <path d="M 105 110 L 105 130" stroke="#10b981" stroke-width="2"/>
+
+                        <!-- Box 2 -->
+                        <rect x="15" y="130" width="180" height="60" fill="#0f172a" stroke="#334155" rx="8"/>
+                        <text x="105" y="155" text-anchor="middle" fill="#fff" font-size="12" font-weight="bold">Prose Summarization</text>
+                        <text x="105" y="175" text-anchor="middle" fill="#94a3b8" font-size="10">DistilBART / TF-IDF</text>
+
+                        <path d="M 105 190 L 105 210" stroke="#10b981" stroke-width="2"/>
+
+                        <!-- Box 3 -->
+                        <rect x="15" y="210" width="180" height="60" fill="#0f172a" stroke="#334155" rx="8"/>
+                        <text x="105" y="235" text-anchor="middle" fill="#fff" font-size="12" font-weight="bold">Translation Engine</text>
+                        <text x="105" y="255" text-anchor="middle" fill="#94a3b8" font-size="10">GoogleTranslator (6 Langs)</text>
+
+                        <path d="M 105 270 L 105 290" stroke="#10b981" stroke-width="2"/>
+
+                        <!-- Box 4 -->
+                        <rect x="15" y="290" width="180" height="60" fill="#0f172a" stroke="#334155" rx="8"/>
+                        <text x="105" y="315" text-anchor="middle" fill="#fff" font-size="12" font-weight="bold">TTS Voiceover & SRT</text>
+                        <text x="105" y="335" text-anchor="middle" fill="#94a3b8" font-size="10">gTTS MP3 + Captions</text>
+                    </g>
+
+                    <!-- Connector Line 4->5 -->
+                    <path d="M 970 255 L 1000 255" stroke="#10b981" stroke-width="3" fill="none"/>
+
+                    <!-- Stage 5: Output FFmpeg Rendering -->
+                    <g transform="translate(1000, 70)">
+                        <rect width="160" height="370" fill="#1e293b" stroke="#ec4899" stroke-width="1.5" rx="12"/>
+                        <text x="80" y="30" text-anchor="middle" fill="#ec4899" font-size="13" font-weight="bold">5. OUTPUT</text>
+
+                        <rect x="15" y="90" width="130" height="190" fill="#0f172a" stroke="#ec4899" rx="8"/>
+                        <text x="80" y="125" text-anchor="middle" fill="#ec4899" font-size="14" font-weight="bold">FFmpeg Render</text>
+                        <text x="80" y="155" text-anchor="middle" fill="#fff" font-size="11">Visual Concat</text>
+                        <text x="80" y="175" text-anchor="middle" fill="#fff" font-size="11">+ AI Voice MP3</text>
+                        <text x="80" y="195" text-anchor="middle" fill="#fff" font-size="11">+ SRT Subtitles</text>
+                        <text x="80" y="235" text-anchor="middle" fill="#10b981" font-size="12" font-weight="bold">FINAL MP4</text>
+                    </g>
+                </svg>
+            </div>
+        </section>
+
+        <!-- Section 3: Master Interactive Flowchart -->
+        <section id="flowchart">
+            <div class="sec-head">
+                <span class="sec-tag">03. Interactive Master Flowchart</span>
+                <h2 class="sec-title">Complete Implemented System Architecture</h2>
+                <p class="sec-desc">Click any step node below to open a visual breakdown showing what it does, inputs, outputs, algorithms, and technology used.</p>
+            </div>
+
+            <div class="flow-container" id="flowchart-box">
+
+                <div class="flow-card color-pre" data-idx="0">
+                    <div class="flow-left">
+                        <span class="flow-badge">STEP 01</span>
+                        <div>
+                            <div class="flow-info-title">1. User Video Ingestion (Upload / URL)</div>
+                            <div class="flow-info-sub">Web interface for local file upload or public web video URL submission.</div>
+                        </div>
+                    </div>
+                    <div class="flow-right">
+                        <span class="flow-tag">Flask + HTML5</span>
+                        <span class="flow-click-hint">Click details ➔</span>
+                    </div>
+                </div>
+                <div class="flow-arrow-down">↓</div>
+
+                <div class="flow-card color-pre" data-idx="1">
+                    <div class="flow-left">
+                        <span class="flow-badge">STEP 02</span>
+                        <div>
+                            <div class="flow-info-title">2. URL Validation & SSRF Security Check</div>
+                            <div class="flow-info-sub">Blocks private IP ranges, canonicalizes YouTube links, downloads via yt-dlp.</div>
+                        </div>
+                    </div>
+                    <div class="flow-right">
+                        <span class="flow-tag">url_downloader.py</span>
+                        <span class="flow-click-hint">Click details ➔</span>
+                    </div>
+                </div>
+                <div class="flow-arrow-down">↓</div>
+
+                <div class="flow-card color-pre" data-idx="2">
+                    <div class="flow-left">
+                        <span class="flow-badge">STEP 03</span>
+                        <div>
+                            <div class="flow-info-title">3. Metadata Parsing & Stream Validation</div>
+                            <div class="flow-info-sub">Reads native FPS, frame count, resolution, and total video duration.</div>
+                        </div>
+                    </div>
+                    <div class="flow-right">
+                        <span class="flow-tag">video_reader.py</span>
+                        <span class="flow-click-hint">Click details ➔</span>
+                    </div>
+                </div>
+                <div class="flow-arrow-down">↓</div>
+
+                <div class="flow-card color-pre" data-idx="3">
+                    <div class="flow-left">
+                        <span class="flow-badge">STEP 04</span>
+                        <div>
+                            <div class="flow-info-title">4. Adaptive Frame Downsampling (2 FPS)</div>
+                            <div class="flow-info-sub">Generates temporal frame grid with fast C++ OpenCV grab skipping.</div>
+                        </div>
+                    </div>
+                    <div class="flow-right">
+                        <span class="flow-tag">frame_sampler.py</span>
+                        <span class="flow-click-hint">Click details ➔</span>
+                    </div>
+                </div>
+                <div class="flow-arrow-down">↓</div>
+
+                <div class="flow-card color-pre" data-idx="4">
+                    <div class="flow-left">
+                        <span class="flow-badge">STEP 05</span>
+                        <div>
+                            <div class="flow-info-title">5. Shot Boundary & Scene Detection</div>
+                            <div class="flow-info-sub">HSV color histogram Bhattacharyya distance scene splitting.</div>
+                        </div>
+                    </div>
+                    <div class="flow-right">
+                        <span class="flow-tag">shot_detector.py</span>
+                        <span class="flow-click-hint">Click details ➔</span>
+                    </div>
+                </div>
+                <div class="flow-arrow-down">↓</div>
+
+                <div class="flow-card color-ai" data-idx="5">
+                    <div class="flow-left">
+                        <span class="flow-badge" style="color:var(--purple); background:rgba(168,85,247,0.12);">STEP 06</span>
+                        <div>
+                            <div class="flow-info-title">6. Visual Feature Extraction (2048-dim)</div>
+                            <div class="flow-info-sub">Batched ResNet-50 CNN forward pass with CUDA & disk caching (.npy).</div>
+                        </div>
+                    </div>
+                    <div class="flow-right">
+                        <span class="flow-tag">ResNet-50 / PyTorch</span>
+                        <span class="flow-click-hint">Click details ➔</span>
+                    </div>
+                </div>
+                <div class="flow-arrow-down">↓</div>
+
+                <div class="flow-card color-ai" data-idx="6">
+                    <div class="flow-left">
+                        <span class="flow-badge" style="color:var(--purple); background:rgba(168,85,247,0.12);">STEP 07</span>
+                        <div>
+                            <div class="flow-info-title">7. Temporal Feature Encoder Modeling</div>
+                            <div class="flow-info-sub">3-layer Transformer Encoder with Sinusoidal Positional Encoding.</div>
+                        </div>
+                    </div>
+                    <div class="flow-right">
+                        <span class="flow-tag">temporal_transformer.py</span>
+                        <span class="flow-click-hint">Click details ➔</span>
+                    </div>
+                </div>
+                <div class="flow-arrow-down">↓</div>
+
+                <div class="flow-card color-ai" data-idx="7">
+                    <div class="flow-left">
+                        <span class="flow-badge" style="color:var(--purple); background:rgba(168,85,247,0.12);">STEP 08</span>
+                        <div>
+                            <div class="flow-info-title">8. Visual Diversity & Duplicate Suppression</div>
+                            <div class="flow-info-sub">Cosine similarity penalty (&lambda; = 0.3) on repetitive scenes.</div>
+                        </div>
+                    </div>
+                    <div class="flow-right">
+                        <span class="flow-tag">diversity.py</span>
+                        <span class="flow-click-hint">Click details ➔</span>
+                    </div>
+                </div>
+                <div class="flow-arrow-down">↓</div>
+
+                <div class="flow-card color-opt" data-idx="8">
+                    <div class="flow-left">
+                        <span class="flow-badge" style="color:var(--amber); background:rgba(245,158,11,0.12);">STEP 09</span>
+                        <div>
+                            <div class="flow-info-title">9. Length-Constrained 0/1 Knapsack DP</div>
+                            <div class="flow-info-sub">Dynamic Programming segment selection under target duration budget.</div>
+                        </div>
+                    </div>
+                    <div class="flow-right">
+                        <span class="flow-tag">segment_selector.py</span>
+                        <span class="flow-click-hint">Click details ➔</span>
+                    </div>
+                </div>
+                <div class="flow-arrow-down">↓</div>
+
+                <div class="flow-card color-mm" data-idx="9">
+                    <div class="flow-left">
+                        <span class="flow-badge" style="color:var(--emerald); background:rgba(16,185,129,0.12);">STEP 10</span>
+                        <div>
+                            <div class="flow-info-title">10. Multimodal Speech-To-Text (Whisper)</div>
+                            <div class="flow-info-sub">OpenAI Whisper ASR speech transcription with word timestamps.</div>
+                        </div>
+                    </div>
+                    <div class="flow-right">
+                        <span class="flow-tag">speech_to_text.py</span>
+                        <span class="flow-click-hint">Click details ➔</span>
+                    </div>
+                </div>
+                <div class="flow-arrow-down">↓</div>
+
+                <div class="flow-card color-mm" data-idx="10">
+                    <div class="flow-left">
+                        <span class="flow-badge" style="color:var(--emerald); background:rgba(16,185,129,0.12);">STEP 11</span>
+                        <div>
+                            <div class="flow-info-title">11. Text Summarization & Translation</div>
+                            <div class="flow-info-sub">DistilBART/TF-IDF prose summary + GoogleTranslator (EN, HI, KN, etc.).</div>
+                        </div>
+                    </div>
+                    <div class="flow-right">
+                        <span class="flow-tag">text_summary & translation</span>
+                        <span class="flow-click-hint">Click details ➔</span>
+                    </div>
+                </div>
+                <div class="flow-arrow-down">↓</div>
+
+                <div class="flow-card color-mm" data-idx="11">
+                    <div class="flow-left">
+                        <span class="flow-badge" style="color:var(--emerald); background:rgba(16,185,129,0.12);">STEP 12</span>
+                        <div>
+                            <div class="flow-info-title">12. TTS Voiceover & SRT Subtitles</div>
+                            <div class="flow-info-sub">gTTS / pyttsx3 voice synthesis + synchronized SRT caption builder.</div>
+                        </div>
+                    </div>
+                    <div class="flow-right">
+                        <span class="flow-tag">tts.py & subtitle_generator</span>
+                        <span class="flow-click-hint">Click details ➔</span>
+                    </div>
+                </div>
+                <div class="flow-arrow-down">↓</div>
+
+                <div class="flow-card color-out" data-idx="12">
+                    <div class="flow-left">
+                        <span class="flow-badge" style="color:var(--pink); background:rgba(236,72,153,0.12);">STEP 13</span>
+                        <div>
+                            <div class="flow-info-title">13. Final Video Composition & FFmpeg Render</div>
+                            <div class="flow-info-sub">Mutes original audio, muxes AI voiceover, burns SRT subtitles to MP4.</div>
+                        </div>
+                    </div>
+                    <div class="flow-right">
+                        <span class="flow-tag">video_merger.py</span>
+                        <span class="flow-click-hint">Click details ➔</span>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Section 4: Module-by-Module Grid -->
+        <section id="modules">
+            <div class="sec-head">
+                <span class="sec-tag">04. Project Modules</span>
+                <h2 class="sec-title">Module-by-Module Code Architecture</h2>
+                <p class="sec-desc">Clean visual cards for every major Python module implemented in the system.</p>
+            </div>
+
+            <div class="modules-grid">
+
+                <div class="glass-box mod-card">
+                    <div>
+                        <div class="mod-top">
+                            <div class="mod-title">01. Web Server & API</div>
+                            <span class="mod-file">app.py</span>
+                        </div>
+                        <ul class="mod-bullets">
+                            <li>Flask REST endpoints for file upload & URL fetch.</li>
+                            <li>Background thread manager (`threading.Thread`).</li>
+                            <li>Live status polling (`/api/status/<job_id>`).</li>
+                        </ul>
+                    </div>
+                    <div class="mod-io">
+                        <div><div class="mod-io-label">Input</div><div class="mod-io-val">HTTP Requests</div></div>
+                        <div><div class="mod-io-label">Output</div><div class="mod-io-val">JSON / Web UI</div></div>
+                    </div>
+                </div>
+
+                <div class="glass-box mod-card">
+                    <div>
+                        <div class="mod-top">
+                            <div class="mod-title">02. Pipeline Orchestrator</div>
+                            <span class="mod-file">run_pipeline.py</span>
+                        </div>
+                        <ul class="mod-bullets">
+                            <li>10-step master pipeline execution loop.</li>
+                            <li>Progress callback updates for live status.</li>
+                            <li>Detailed performance timing reports.</li>
+                        </ul>
+                    </div>
+                    <div class="mod-io">
+                        <div><div class="mod-io-label">Input</div><div class="mod-io-val">Video Path + Budget</div></div>
+                        <div><div class="mod-io-label">Output</div><div class="mod-io-val">Summary MP4</div></div>
+                    </div>
+                </div>
+
+                <div class="glass-box mod-card">
+                    <div>
+                        <div class="mod-top">
+                            <div class="mod-title">03. URL Ingestion & SSRF</div>
+                            <span class="mod-file">preprocessing/url_downloader.py</span>
+                        </div>
+                        <ul class="mod-bullets">
+                            <li>Public URL security check (SSRF IP blocking).</li>
+                            <li>yt-dlp video downloader (500MB cap).</li>
+                            <li>FFmpeg MP4 format normalization.</li>
+                        </ul>
+                    </div>
+                    <div class="mod-io">
+                        <div><div class="mod-io-label">Input</div><div class="mod-io-val">Public Video URL</div></div>
+                        <div><div class="mod-io-label">Output</div><div class="mod-io-val">Local MP4 File</div></div>
+                    </div>
+                </div>
+
+                <div class="glass-box mod-card">
+                    <div>
+                        <div class="mod-top">
+                            <div class="mod-title">04. Video Metadata Parser</div>
+                            <span class="mod-file">preprocessing/video_reader.py</span>
+                        </div>
+                        <ul class="mod-bullets">
+                            <li>OpenCV stream reader validation.</li>
+                            <li>Extracts FPS, total frames, resolution.</li>
+                            <li>Calculates total duration in seconds.</li>
+                        </ul>
+                    </div>
+                    <div class="mod-io">
+                        <div><div class="mod-io-label">Input</div><div class="mod-io-val">Video File Path</div></div>
+                        <div><div class="mod-io-label">Output</div><div class="mod-io-val">Metadata Dict</div></div>
+                    </div>
+                </div>
+
+                <div class="glass-box mod-card">
+                    <div>
+                        <div class="mod-top">
+                            <div class="mod-title">05. Frame Sampler</div>
+                            <span class="mod-file">preprocessing/frame_sampler.py</span>
+                        </div>
+                        <ul class="mod-bullets">
+                            <li>2 FPS adaptive downsampling grid.</li>
+                            <li>Fast C++ OpenCV frame grab skipping.</li>
+                            <li>Direct shot keyframe extractor.</li>
+                        </ul>
+                    </div>
+                    <div class="mod-io">
+                        <div><div class="mod-io-label">Input</div><div class="mod-io-val">Video Path, Target FPS</div></div>
+                        <div><div class="mod-io-label">Output</div><div class="mod-io-val">Sampled Frames</div></div>
+                    </div>
+                </div>
+
+                <div class="glass-box mod-card">
+                    <div>
+                        <div class="mod-top">
+                            <div class="mod-title">06. Shot & Scene Detector</div>
+                            <span class="mod-file">preprocessing/shot_detector.py</span>
+                        </div>
+                        <ul class="mod-bullets">
+                            <li>HSV color histogram difference calculation.</li>
+                            <li>Bhattacharyya statistical distance metric.</li>
+                            <li>Adaptive threshold scene cuts ($\mu + 1.8\sigma$).</li>
+                        </ul>
+                    </div>
+                    <div class="mod-io">
+                        <div><div class="mod-io-label">Input</div><div class="mod-io-val">Sampled Frames</div></div>
+                        <div><div class="mod-io-label">Output</div><div class="mod-io-val">Shot Intervals</div></div>
+                    </div>
+                </div>
+
+                <div class="glass-box mod-card">
+                    <div>
+                        <div class="mod-top">
+                            <div class="mod-title">07. ResNet Visual Extractor</div>
+                            <span class="mod-file">models/resnet_feature_extractor.py</span>
+                        </div>
+                        <ul class="mod-bullets">
+                            <li>Pretrained ResNet-50 CNN (no FC layer).</li>
+                            <li>Extracts 2048-dim feature vectors per frame.</li>
+                            <li>CUDA/CPU auto-detect & `.npy` caching.</li>
+                        </ul>
+                    </div>
+                    <div class="mod-io">
+                        <div><div class="mod-io-label">Input</div><div class="mod-io-val">Keyframe Images</div></div>
+                        <div><div class="mod-io-label">Output</div><div class="mod-io-val">2048-dim Feature Array</div></div>
+                    </div>
+                </div>
+
+                <div class="glass-box mod-card">
+                    <div>
+                        <div class="mod-top">
+                            <div class="mod-title">08. Temporal Transformer</div>
+                            <span class="mod-file">models/temporal_transformer.py</span>
+                        </div>
+                        <ul class="mod-bullets">
+                            <li>3-layer PyTorch Transformer Encoder.</li>
+                            <li>Sinusoidal Positional Encoding.</li>
+                            <li>Predicts frame scores in $[0, 1]$ via Sigmoid.</li>
+                        </ul>
+                    </div>
+                    <div class="mod-io">
+                        <div><div class="mod-io-label">Input</div><div class="mod-io-val">(B, T, 2048) Tensor</div></div>
+                        <div><div class="mod-io-label">Output</div><div class="mod-io-val">(B, T) Frame Scores</div></div>
+                    </div>
+                </div>
+
+                <div class="glass-box mod-card">
+                    <div>
+                        <div class="mod-top">
+                            <div class="mod-title">09. Diversity Penalty</div>
+                            <span class="mod-file">summarization/diversity.py</span>
+                        </div>
+                        <ul class="mod-bullets">
+                            <li>Pairwise cosine similarity matrix.</li>
+                            <li>Suppresses visually redundant near-duplicates.</li>
+                            <li>Applies penalty factor ($\lambda = 0.3$).</li>
+                        </ul>
+                    </div>
+                    <div class="mod-io">
+                        <div><div class="mod-io-label">Input</div><div class="mod-io-val">Scores + Features</div></div>
+                        <div><div class="mod-io-label">Output</div><div class="mod-io-val">Adjusted Scores</div></div>
+                    </div>
+                </div>
+
+                <div class="glass-box mod-card">
+                    <div>
+                        <div class="mod-top">
+                            <div class="mod-title">10. 0/1 Knapsack DP Selector</div>
+                            <span class="mod-file">summarization/segment_selector.py</span>
+                        </div>
+                        <ul class="mod-bullets">
+                            <li>0/1 Knapsack Dynamic Programming solver.</li>
+                            <li>Maximizes total score under duration budget.</li>
+                            <li>Chronological shot reordering.</li>
+                        </ul>
+                    </div>
+                    <div class="mod-io">
+                        <div><div class="mod-io-label">Input</div><div class="mod-io-val">Shots, Scores, Budget</div></div>
+                        <div><div class="mod-io-label">Output</div><div class="mod-io-val">Optimal Shot Subset</div></div>
+                    </div>
+                </div>
+
+                <div class="glass-box mod-card">
+                    <div>
+                        <div class="mod-top">
+                            <div class="mod-title">11. Speech-To-Text (STT)</div>
+                            <span class="mod-file">multimodal/speech_to_text.py</span>
+                        </div>
+                        <ul class="mod-bullets">
+                            <li>Extracts 16kHz mono WAV audio stream.</li>
+                            <li>OpenAI Whisper ASR model transcription.</li>
+                            <li>Generates word-level timestamps.</li>
+                        </ul>
+                    </div>
+                    <div class="mod-io">
+                        <div><div class="mod-io-label">Input</div><div class="mod-io-val">16kHz WAV Audio</div></div>
+                        <div><div class="mod-io-label">Output</div><div class="mod-io-val">Transcript JSON</div></div>
+                    </div>
+                </div>
+
+                <div class="glass-box mod-card">
+                    <div>
+                        <div class="mod-top">
+                            <div class="mod-title">12. Text Summarizer</div>
+                            <span class="mod-file">multimodal/text_summary.py</span>
+                        </div>
+                        <ul class="mod-bullets">
+                            <li>Narration-ready prose text summarization.</li>
+                            <li>Matches target speech rate (~2.2 words/sec).</li>
+                            <li>DistilBART CNN / TF-IDF sentence ranking.</li>
+                        </ul>
+                    </div>
+                    <div class="mod-io">
+                        <div><div class="mod-io-label">Input</div><div class="mod-io-val">Full Transcript Text</div></div>
+                        <div><div class="mod-io-label">Output</div><div class="mod-io-val">Prose Text Summary</div></div>
+                    </div>
+                </div>
+
+                <div class="glass-box mod-card">
+                    <div>
+                        <div class="mod-top">
+                            <div class="mod-title">13. Language Translator</div>
+                            <span class="mod-file">multimodal/translation.py</span>
+                        </div>
+                        <ul class="mod-bullets">
+                            <li>Translates summary to selected language.</li>
+                            <li>Supports EN, HI, KN, TA, TE, ML.</li>
+                            <li>`deep_translator` GoogleTranslator with retries.</li>
+                        </ul>
+                    </div>
+                    <div class="mod-io">
+                        <div><div class="mod-io-label">Input</div><div class="mod-io-val">Summary Text, Lang</div></div>
+                        <div><div class="mod-io-label">Output</div><div class="mod-io-val">Translated Text</div></div>
+                    </div>
+                </div>
+
+                <div class="glass-box mod-card">
+                    <div>
+                        <div class="mod-top">
+                            <div class="mod-title">14. Text-To-Speech (TTS)</div>
+                            <span class="mod-file">multimodal/tts.py</span>
+                        </div>
+                        <ul class="mod-bullets">
+                            <li>Synthesizes voiceover MP3 audio narration.</li>
+                            <li>gTTS multi-TLD failover protection.</li>
+                            <li>pyttsx3 offline backup synthesis.</li>
+                        </ul>
+                    </div>
+                    <div class="mod-io">
+                        <div><div class="mod-io-label">Input</div><div class="mod-io-val">Translated Text</div></div>
+                        <div><div class="mod-io-label">Output</div><div class="mod-io-val">Voiceover Audio MP3</div></div>
+                    </div>
+                </div>
+
+                <div class="glass-box mod-card">
+                    <div>
+                        <div class="mod-top">
+                            <div class="mod-title">15. SRT Subtitle Builder</div>
+                            <span class="mod-file">multimodal/subtitle_generator.py</span>
+                        </div>
+                        <ul class="mod-bullets">
+                            <li>Builds synchronized SRT caption cues.</li>
+                            <li>Max 10 words/cue, max 2 lines, max 42 chars.</li>
+                            <li>Remaps timestamps to summary timeline.</li>
+                        </ul>
+                    </div>
+                    <div class="mod-io">
+                        <div><div class="mod-io-label">Input</div><div class="mod-io-val">Summary Text, Audio Dur</div></div>
+                        <div><div class="mod-io-label">Output</div><div class="mod-io-val">Synchronized SRT</div></div>
+                    </div>
+                </div>
+
+                <div class="glass-box mod-card">
+                    <div>
+                        <div class="mod-top">
+                            <div class="mod-title">16. Video Composer & Merger</div>
+                            <span class="mod-file">video_processing/video_merger.py</span>
+                        </div>
+                        <ul class="mod-bullets">
+                            <li>Cuts visual clips via FFmpeg `-c copy`.</li>
+                            <li>Concatenates clips, mutes original audio.</li>
+                            <li>Muxes AI narration MP3 & burns SRT captions.</li>
+                        </ul>
+                    </div>
+                    <div class="mod-io">
+                        <div><div class="mod-io-label">Input</div><div class="mod-io-val">Clips + MP3 + SRT</div></div>
+                        <div><div class="mod-io-label">Output</div><div class="mod-io-val">Final Summary MP4</div></div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Section 5: Technology Stack Visual Grid -->
+        <section id="techstack">
+            <div class="sec-head">
+                <span class="sec-tag">05. Tech Stack</span>
+                <h2 class="sec-title">Technologies & Their Explicit Project Roles</h2>
+                <p class="sec-desc">Overview of every framework, library, and tool used in this project.</p>
+            </div>
+
+            <div class="tech-cat">
+                <div class="tech-cat-title">🧠 Deep Learning & AI Models</div>
+                <div class="tech-grid">
+                    <div class="tech-box">
+                        <div class="tech-name">PyTorch</div>
+                        <div class="tech-role">Deep Learning Engine</div>
+                        <div class="tech-desc">Executes tensor computations, CUDA hardware acceleration, and PyTorch Transformer Encoder.</div>
+                    </div>
+                    <div class="tech-box">
+                        <div class="tech-name">ResNet-50</div>
+                        <div class="tech-role">Visual Feature Extractor</div>
+                        <div class="tech-desc">Pretrained CNN stripped of classification head to extract 2048-dim visual feature vectors.</div>
+                    </div>
+                    <div class="tech-box">
+                        <div class="tech-name">Temporal Transformer</div>
+                        <div class="tech-role">Context Encoder</div>
+                        <div class="tech-desc">3-layer Transformer Encoder (`d_model=256`, `nhead=8`) modeling frame-to-frame temporal context.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tech-cat">
+                <div class="tech-cat-title">🎙️ Speech, NLP & Multimodal</div>
+                <div class="tech-grid">
+                    <div class="tech-box">
+                        <div class="tech-name">OpenAI Whisper</div>
+                        <div class="tech-role">Speech-to-Text ASR</div>
+                        <div class="tech-desc">Transcribes spoken audio into timestamped text with word-level alignment.</div>
+                    </div>
+                    <div class="tech-box">
+                        <div class="tech-name">DistilBART / TF-IDF</div>
+                        <div class="tech-role">Text Summarizer</div>
+                        <div class="tech-desc">Condenses transcript text into prose summary matched to target speech duration (~2.2 words/sec).</div>
+                    </div>
+                    <div class="tech-box">
+                        <div class="tech-name">GoogleTranslator</div>
+                        <div class="tech-role">Multi-Lang Translator</div>
+                        <div class="tech-desc">Translates summaries into English, Hindi, Kannada, Tamil, Telugu, and Malayalam.</div>
+                    </div>
+                    <div class="tech-box">
+                        <div class="tech-name">gTTS / pyttsx3</div>
+                        <div class="tech-role">Speech Synthesizer</div>
+                        <div class="tech-desc">Synthesizes AI voiceover MP3 audio narration in user-selected language.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tech-cat">
+                <div class="tech-cat-title">🎬 Media Processing & Web</div>
+                <div class="tech-grid">
+                    <div class="tech-box">
+                        <div class="tech-name">OpenCV (cv2)</div>
+                        <div class="tech-role">Frame & Shot Analysis</div>
+                        <div class="tech-desc">Extracts video frames, resizes images, and computes HSV color histogram differences.</div>
+                    </div>
+                    <div class="tech-box">
+                        <div class="tech-name">FFmpeg / FFprobe</div>
+                        <div class="tech-role">Media Rendering Engine</div>
+                        <div class="tech-desc">Cuts video clips, merges visual stream, muxes AI narration audio, and burns SRT subtitles.</div>
+                    </div>
+                    <div class="tech-box">
+                        <div class="tech-name">Flask & Vanilla JS</div>
+                        <div class="tech-role">Web App Server & UI</div>
+                        <div class="tech-desc">Runs REST API endpoints, background job worker threads, AJAX upload, and progress polling.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 6: AI Engine Deep-Dive Diagram -->
+        <section id="ai-engine">
+            <div class="sec-head">
+                <span class="sec-tag">06. AI Architecture</span>
+                <h2 class="sec-title">Core AI Engine Visual Illustration</h2>
+                <p class="sec-desc">How deep learning models process video frames from raw pixels to final importance selection.</p>
+            </div>
+
+            <div class="svg-container">
+                <!-- AI Engine Vector Graphic -->
+                <svg viewBox="0 0 1000 320" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="1000" height="320" fill="#0f172a" rx="12"/>
+
+                    <!-- Frame Input -->
+                    <rect x="30" y="80" width="130" height="160" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5" rx="8"/>
+                    <text x="95" y="110" text-anchor="middle" fill="#38bdf8" font-size="13" font-weight="bold">Video Frame</text>
+                    <rect x="50" y="130" width="90" height="90" fill="#0284c7" opacity="0.3" rx="6"/>
+                    <text x="95" y="180" text-anchor="middle" fill="#fff" font-size="10">224 x 224 RGB</text>
+
+                    <!-- Arrow 1 -->
+                    <path d="M 160 160 L 210 160" stroke="#38bdf8" stroke-width="2.5"/>
+
+                    <!-- ResNet Box -->
+                    <rect x="210" y="80" width="180" height="160" fill="#1e293b" stroke="#a855f7" stroke-width="1.5" rx="8"/>
+                    <text x="300" y="110" text-anchor="middle" fill="#a855f7" font-size="13" font-weight="bold">ResNet-50 CNN</text>
+                    <text x="300" y="135" text-anchor="middle" fill="#94a3b8" font-size="10">Feature Extractor</text>
+                    <rect x="230" y="150" width="140" height="60" fill="#0f172a" stroke="#a855f7" rx="6"/>
+                    <text x="300" y="185" text-anchor="middle" fill="#a855f7" font-size="11" font-weight="bold">(2048,) Vector</text>
+
+                    <!-- Arrow 2 -->
+                    <path d="M 390 160 L 440 160" stroke="#a855f7" stroke-width="2.5"/>
+
+                    <!-- Transformer Box -->
+                    <rect x="440" y="60" width="260" height="200" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5" rx="8"/>
+                    <text x="570" y="90" text-anchor="middle" fill="#f59e0b" font-size="14" font-weight="bold">Temporal Transformer</text>
+                    
+                    <rect x="460" y="110" width="220" height="40" fill="#0f172a" stroke="#334155" rx="6"/>
+                    <text x="570" y="135" text-anchor="middle" fill="#fff" font-size="10">Sinusoidal Positional Encoding</text>
+
+                    <rect x="460" y="160" width="220" height="40" fill="#0f172a" stroke="#334155" rx="6"/>
+                    <text x="570" y="185" text-anchor="middle" fill="#f59e0b" font-size="10" font-weight="bold">3 Transformer Encoder Layers (8 Heads)</text>
+
+                    <rect x="460" y="210" width="220" height="35" fill="#0f172a" stroke="#334155" rx="6"/>
+                    <text x="570" y="232" text-anchor="middle" fill="#10b981" font-size="10" font-weight="bold">Sigmoid Frame Score Head</text>
+
+                    <!-- Arrow 3 -->
+                    <path d="M 700 160 L 750 160" stroke="#10b981" stroke-width="2.5"/>
+
+                    <!-- Knapsack Box -->
+                    <rect x="750" y="80" width="220" height="160" fill="#1e293b" stroke="#10b981" stroke-width="1.5" rx="8"/>
+                    <text x="860" y="110" text-anchor="middle" fill="#10b981" font-size="13" font-weight="bold">Knapsack DP Selection</text>
+                    <text x="860" y="135" text-anchor="middle" fill="#94a3b8" font-size="10">Diversity Penalty (λ = 0.3)</text>
+                    
+                    <rect x="770" y="150" width="180" height="70" fill="#0f172a" stroke="#10b981" rx="6"/>
+                    <text x="860" y="180" text-anchor="middle" fill="#10b981" font-size="12" font-weight="bold">Optimal Summary Shots</text>
+                    <text x="860" y="200" text-anchor="middle" fill="#fff" font-size="10">Within Duration Budget</text>
+                </svg>
+            </div>
+        </section>
+
+        <!-- Section 7: Multimodal Parallel Diagram -->
+        <section id="multimodal">
+            <div class="sec-head">
+                <span class="sec-tag">07. Multimodal Architecture</span>
+                <h2 class="sec-title">Multimodal Video & Speech Parallel Pipeline</h2>
+                <p class="sec-desc">Parallel processing tracks for visual video stream vs audio speech processing.</p>
+            </div>
+
+            <div class="svg-container">
+                <!-- Multimodal Parallel Workflow SVG -->
+                <svg viewBox="0 0 1000 360" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="1000" height="360" fill="#0f172a" rx="12"/>
+
+                    <text x="500" y="30" text-anchor="middle" fill="#38bdf8" font-size="16" font-weight="bold">PARALLEL MULTIMODAL VIDEO & SPEECH PROCESSING WORKFLOW</text>
+
+                    <!-- Input Node -->
+                    <rect x="30" y="150" width="160" height="60" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5" rx="8"/>
+                    <text x="110" y="175" text-anchor="middle" fill="#fff" font-size="12" font-weight="bold">Selected Shots</text>
+                    <text x="110" y="195" text-anchor="middle" fill="#38bdf8" font-size="10">Knapsack DP Output</text>
+
+                    <!-- Split Arrow Top -->
+                    <path d="M 190 165 L 260 100" stroke="#38bdf8" stroke-width="2"/>
+                    <!-- Split Arrow Bottom -->
+                    <path d="M 190 195 L 260 260" stroke="#a855f7" stroke-width="2"/>
+
+                    <!-- Visual Track Top -->
+                    <rect x="260" y="70" width="460" height="60" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5" rx="8"/>
+                    <text x="490" y="95" text-anchor="middle" fill="#38bdf8" font-size="12" font-weight="bold">VISUAL TRACK: Sub-clip Extraction & FFmpeg Video Concat</text>
+                    <text x="490" y="115" text-anchor="middle" fill="#94a3b8" font-size="10">Fast stream copy without re-encoding (-c copy)</text>
+
+                    <!-- Audio Track Bottom -->
+                    <rect x="260" y="230" width="460" height="60" fill="#1e293b" stroke="#a855f7" stroke-width="1.5" rx="8"/>
+                    <text x="490" y="255" text-anchor="middle" fill="#a855f7" font-size="12" font-weight="bold">AUDIO TRACK: Whisper ASR ➔ Summary ➔ Translate ➔ TTS Speech</text>
+                    <text x="490" y="275" text-anchor="middle" fill="#94a3b8" font-size="10">Generates localized voiceover MP3 & synchronized SRT subtitles</text>
+
+                    <!-- Merge Arrows -->
+                    <path d="M 720 100 L 790 165" stroke="#38bdf8" stroke-width="2"/>
+                    <path d="M 720 260 L 790 195" stroke="#a855f7" stroke-width="2"/>
+
+                    <!-- Final Composite Output Box -->
+                    <rect x="790" y="130" width="180" height="100" fill="#1e293b" stroke="#10b981" stroke-width="2" rx="10"/>
+                    <text x="880" y="160" text-anchor="middle" fill="#10b981" font-size="13" font-weight="bold">FFmpeg Render</text>
+                    <text x="880" y="180" text-anchor="middle" fill="#fff" font-size="10">Muxes AI Voiceover MP3</text>
+                    <text x="880" y="195" text-anchor="middle" fill="#fff" font-size="10">Burns SRT Subtitles</text>
+                    <text x="880" y="215" text-anchor="middle" fill="#10b981" font-size="11" font-weight="bold">FINAL MP4 VIDEO</text>
+                </svg>
+            </div>
+        </section>
+
+        <!-- Section 8: Folder Tree Visual Explorer -->
+        <section id="folders">
+            <div class="sec-head">
+                <span class="sec-tag">08. Folder Tree</span>
+                <h2 class="sec-title">Project Directory & File Structure</h2>
+                <p class="sec-desc">Complete map of project directories and files.</p>
+            </div>
+
+            <div class="tree-box">
+                <span class="tree-folder">vtvdemo/</span><br>
+                ├── <span class="tree-file">app.py</span> <span class="tree-note"># Flask Web Server & REST API Endpoints</span><br>
+                ├── <span class="tree-file">config.py</span> <span class="tree-note"># System configurations & supported languages</span><br>
+                ├── <span class="tree-file">run_pipeline.py</span> <span class="tree-note"># Main 10-step pipeline orchestrator</span><br>
+                ├── <span class="tree-file">requirements.txt</span> <span class="tree-note"># Python package dependencies</span><br>
+                ├── <span class="tree-folder">preprocessing/</span><br>
+                │   ├── <span class="tree-file">video_reader.py</span> <span class="tree-note"># Video metadata parsing (OpenCV)</span><br>
+                │   ├── <span class="tree-file">frame_sampler.py</span> <span class="tree-note"># 2 FPS frame downsampling</span><br>
+                │   ├── <span class="tree-file">shot_detector.py</span> <span class="tree-note"># HSV histogram scene detection</span><br>
+                │   └── <span class="tree-file">url_downloader.py</span> <span class="tree-note"># SSRF security check & yt-dlp fetch</span><br>
+                ├── <span class="tree-folder">models/</span><br>
+                │   ├── <span class="tree-file">resnet_feature_extractor.py</span> <span class="tree-note"># ResNet-50 2048-dim visual extractor</span><br>
+                │   └── <span class="tree-file">temporal_transformer.py</span> <span class="tree-note"># PyTorch Transformer Encoder</span><br>
+                ├── <span class="tree-folder">summarization/</span><br>
+                │   ├── <span class="tree-file">diversity.py</span> <span class="tree-note"># Cosine similarity diversity penalty</span><br>
+                │   └── <span class="tree-file">segment_selector.py</span> <span class="tree-note"># 0/1 Knapsack DP duration selector</span><br>
+                ├── <span class="tree-folder">multimodal/</span><br>
+                │   ├── <span class="tree-file">pipeline.py</span> <span class="tree-note"># Multimodal orchestrator</span><br>
+                │   ├── <span class="tree-file">speech_to_text.py</span> <span class="tree-note"># OpenAI Whisper ASR speech transcription</span><br>
+                │   ├── <span class="tree-file">text_summary.py</span> <span class="tree-note"># Narration prose summarizer</span><br>
+                │   ├── <span class="tree-file">translation.py</span> <span class="tree-note"># GoogleTranslator multi-lang translator</span><br>
+                │   ├── <span class="tree-file">tts.py</span> <span class="tree-note"># gTTS / pyttsx3 AI speech synthesizer</span><br>
+                │   └── <span class="tree-file">subtitle_generator.py</span> <span class="tree-note"># Synchronized SRT subtitle generator</span><br>
+                └── <span class="tree-folder">video_processing/</span><br>
+                    ├── <span class="tree-file">clip_extractor.py</span> <span class="tree-note"># Fast FFmpeg sub-clip extraction</span><br>
+                    └── <span class="tree-file">video_merger.py</span> <span class="tree-note"># FFmpeg video concatenation & subtitle burn-in</span><br>
+            </div>
+        </section>
+
+        <!-- Section 9: Glossary Cards -->
+        <section id="glossary">
+            <div class="sec-head">
+                <span class="sec-tag">09. Glossary</span>
+                <h2 class="sec-title">Key Terminology & Definitions</h2>
+                <p class="sec-desc">Simple definitions of core AI and video processing concepts.</p>
+            </div>
+
+            <div class="glossary-grid">
+                <div class="gloss-card">
+                    <div class="gloss-term">ResNet-50</div>
+                    <div class="gloss-def">50-layer deep Convolutional Neural Network used to convert raw video keyframe pixels into 2048-dimensional feature vectors.</div>
+                </div>
+                <div class="gloss-card">
+                    <div class="gloss-term">Transformer Encoder</div>
+                    <div class="gloss-def">3-layer PyTorch neural network utilizing self-attention mechanisms to model global temporal narrative context across frames.</div>
+                </div>
+                <div class="gloss-card">
+                    <div class="gloss-term">0/1 Knapsack DP</div>
+                    <div class="gloss-def">Dynamic Programming algorithm that selects the maximum importance video shots without exceeding the target summary duration.</div>
+                </div>
+                <div class="gloss-card">
+                    <div class="gloss-term">OpenAI Whisper</div>
+                    <div class="gloss-def">State-of-the-art Automatic Speech Recognition (ASR) model that transcribes video audio into timestamped speech text.</div>
+                </div>
+                <div class="gloss-card">
+                    <div class="gloss-term">Bhattacharyya Distance</div>
+                    <div class="gloss-def">Statistical measure of color distribution overlap used to detect visual scene changes between consecutive video frames.</div>
+                </div>
+                <div class="gloss-card">
+                    <div class="gloss-term">Multimodal AI</div>
+                    <div class="gloss-def">AI architecture that unifies visual video frames, audio speech, and natural language text into a single coherent output.</div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modal Popup for Flowchart Node Details -->
+    <div class="modal-bg" id="modal-popup">
+        <div class="modal-card">
+            <button class="modal-close-btn" id="modal-close">&times;</button>
+            <h3 class="modal-head-title" id="m-title">Step Title</h3>
+            
+            <div class="modal-grid-details">
+                <div class="modal-box-item">
+                    <div class="modal-box-label">🎯 What It Does</div>
+                    <div class="modal-box-val" id="m-does">Description...</div>
+                </div>
+                <div class="modal-box-item">
+                    <div class="modal-box-label">📥 Input Data</div>
+                    <div class="modal-box-val" id="m-input">Input details...</div>
+                </div>
+                <div class="modal-box-item">
+                    <div class="modal-box-label">⚙️ Algorithmic Process</div>
+                    <div class="modal-box-val" id="m-process">Process details...</div>
+                </div>
+                <div class="modal-box-item">
+                    <div class="modal-box-label">📤 Output Generated</div>
+                    <div class="modal-box-val" id="m-output">Output details...</div>
+                </div>
+                <div class="modal-box-item">
+                    <div class="modal-box-label">💻 Technology & Implementation</div>
+                    <div class="modal-box-val" id="m-tech">Tech stack...</div>
+                </div>
+                <div class="modal-box-item">
+                    <div class="modal-box-label">💡 Why It Is Used</div>
+                    <div class="modal-box-val" id="m-why">Rationale...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Back to Top Float Button -->
+    <button class="btn-top" id="btn-top" title="Back to top">↑</button>
+
+    <!-- Interactive JavaScript -->
+    <script>
+        // Flowchart Node Interactive Details Data
+        const stepDetails = [
+            {
+                title: "01. User Video Ingestion (Upload / URL)",
+                does: "Receives user video file uploads (MP4, AVI, MOV) up to 500MB or public video URLs via the web interface.",
+                input: "Local video file or public video URL link string.",
+                process: "Flask routes `/api/upload` or `/api/url` receive request, generate UUID job ID, and save files to dedicated `uploads/` directory.",
+                output: "Saved local video file & initial job ID metadata.",
+                tech: "Flask microframework, HTML5, JavaScript Fetch API (`app.py`)",
+                why: "Provides a clean entry point for both local computer uploads and online video link ingestion."
+            },
+            {
+                title: "02. URL Validation & SSRF Security Check",
+                does: "Validates public URLs and prevents Server-Side Request Forgery (SSRF) attacks on internal networks.",
+                input: "Public URL string.",
+                process: "Parses domain/IP, blocks private IP ranges (127.0.0.1, 10.x, 192.168.x), canonicalizes YouTube links, downloads via yt-dlp, and normalizes to MP4 format via FFmpeg.",
+                output: "Validated, local MP4 video file.",
+                tech: "yt-dlp, Python `ipaddress` & `urllib`, FFmpeg (`preprocessing/url_downloader.py`)",
+                why: "Ensures web server security while providing seamless support for YouTube and web video downloads."
+            },
+            {
+                title: "03. Video Reader & Stream Metadata Parsing",
+                does: "Reads physical video file properties using OpenCV video capture bindings.",
+                input: "Absolute path to local MP4 video file.",
+                process: "Opens video stream via `cv2.VideoCapture`, reads native FPS, total frame count, resolution width/height, and calculates total duration ($T = \text{frames}/\text{fps}$).",
+                output: "Metadata dictionary (FPS, resolution, duration in seconds).",
+                tech: "OpenCV Python (`preprocessing/video_reader.py`)",
+                why: "Establishes baseline video parameters required for frame sampling and duration optimization."
+            },
+            {
+                title: "04. Adaptive Frame Downsampling (2 FPS)",
+                does: "Extracts a temporally downsampled grid of frames (2 FPS) to optimize processing efficiency.",
+                input: "Video path, native FPS, target sample FPS (2.0).",
+                process: "Calculates stride $\text{step} = \max(1, \lfloor \text{native\_fps} / 2.0 \rceil)$. Uses fast C++ OpenCV `cap.grab()` for efficient frame skipping.",
+                output: "Sampled frame images list, timestamps, and frame indices.",
+                tech: "OpenCV `cv2.VideoCapture` (`preprocessing/frame_sampler.py`)",
+                why: "Reduces computational overhead by 10x–15x while preserving visual information."
+            },
+            {
+                title: "05. Shot Boundary & Scene Detection",
+                does: "Splits video into continuous visual scene segments (shots) based on color transitions.",
+                input: "Sampled frame thumbnails ($160 \times 90$).",
+                process: "Converts frames to HSV color space, computes 2D HSV color histograms, measures Bhattacharyya distance, and cuts scenes at adaptive thresholds ($\mu + 1.8\sigma$).",
+                output: "List of continuous shot interval tuples `[(start_sec, end_sec), ...]`. ",
+                tech: "OpenCV `cv2.calcHist` & `cv2.compareHist` (`preprocessing/shot_detector.py`)",
+                why: "Ensures summary video consists of cohesive, complete visual scenes rather than abrupt frame cuts."
+            },
+            {
+                title: "06. Visual Feature Extraction (2048-dim)",
+                does: "Converts visual video keyframes into 2048-dimensional feature vectors.",
+                input: "Keyframe images per shot.",
+                process: "Resizes keyframes to $224 \times 224$, normalizes via ImageNet parameters, passes through ResNet-50 (fc layer removed), average-pools shot vectors, and applies L2 normalization with `.npy` caching.",
+                output: "Feature matrix of shape $(T, 2048)$ and `.npy` cache files.",
+                tech: "PyTorch, torchvision ResNet-50, CUDA (`models/resnet_feature_extractor.py`)",
+                why: "Extracts deep visual semantic representations for AI importance scoring."
+            },
+            {
+                title: "07. Temporal Feature Encoder Modeling",
+                does: "Evaluates frame importance in global temporal narrative context.",
+                input: "Visual feature tensor of shape $(B, T, 2048)$.",
+                process: "Linear projection ($2048 \rightarrow 256$), adds Sinusoidal Positional Encoding, passes sequence through 3-layer PyTorch Transformer Encoder (`nhead=8`), and predicts frame scores in $[0, 1]$.",
+                output: "Frame importance score vector.",
+                tech: "PyTorch `nn.TransformerEncoder` (`models/temporal_transformer.py`)",
+                why: "Captures long-range video storyline structure using self-attention."
+            },
+            {
+                title: "08. Visual Diversity & Duplicate Suppression",
+                does: "Penalizes visually similar high-scoring shots to prevent repetitive scenes.",
+                input: "Shot scores and mean shot feature vectors.",
+                process: "Computes pairwise cosine similarity matrix. Subtracts diversity penalty: $\text{Score}_{\text{adj}}(i) = \text{Score}(i) - \lambda \cdot \max_{j > i} \text{Sim}(i, j)$ ($\lambda = 0.3$).",
+                output: "Adjusted shot importance scores.",
+                tech: "NumPy matrix operations (`summarization/diversity.py`)",
+                why: "Guarantees visual variety and prevents near-duplicate content in the final summary."
+            },
+            {
+                title: "09. Length-Constrained 0/1 Knapsack DP",
+                does: "Selects optimal shot subset maximizing importance score under exact target duration budget.",
+                input: "Shots, adjusted scores, target summary duration budget.",
+                process: "Scales durations to tenths of a second ($w_i$) and scores to integers ($v_i$). Solves 0/1 Knapsack DP table $DP[i][w]$ and backtracks selected shot indices.",
+                output: "Selected shot intervals list `[(start, end)]` and total duration.",
+                tech: "Dynamic Programming (`summarization/segment_selector.py`)",
+                why: "Provides mathematically optimal selection adhering strictly to user duration budget."
+            },
+            {
+                title: "10. Multimodal Speech-To-Text (Whisper)",
+                does: "Transcribes spoken video audio into text with word timestamps.",
+                input: "16kHz mono WAV audio file extracted from video.",
+                process: "Extracts audio via FFmpeg (`pcm_s16le`), runs OpenAI Whisper ASR model, extracts text, and maps word timestamps to final summary timeline.",
+                output: "Transcript text file, timestamped JSON object, and detected language.",
+                tech: "OpenAI Whisper ASR, PyTorch, FFmpeg (`multimodal/speech_to_text.py`)",
+                why: "Enables speech understanding for transcript summarization, translation, and captions."
+            },
+            {
+                title: "11. Text Summarization & Translation",
+                does: "Condenses transcript into narration prose and translates to user's selected language.",
+                input: "Transcript text, target language code, target summary duration.",
+                process: "Calculates target word count (~2.2 words/sec speech rate). Summarizes via DistilBART CNN / TF-IDF. Translates text using GoogleTranslator.",
+                output: "Prose summary text and translated summary string.",
+                tech: "HuggingFace Transformers, DistilBART, `deep_translator` (`multimodal/text_summary.py` & `translation.py`)",
+                why: "Produces natural voiceover scripts tailored to summary duration in user's target language."
+            },
+            {
+                title: "12. TTS Voiceover & SRT Subtitles",
+                does: "Synthesizes voiceover MP3 audio narration and builds synchronized SRT subtitles.",
+                input: "Translated summary text, target language code, summary duration.",
+                process: "Synthesizes voiceover MP3 using gTTS (with pyttsx3 fallback). Measures audio duration via FFprobe. Generates SRT enforcing rules: max 10 words/cue, max 2 lines, max 42 chars/line.",
+                output: "Voiceover MP3 audio file and synchronized SRT subtitle file.",
+                tech: "gTTS, pyttsx3, FFprobe (`multimodal/tts.py` & `subtitle_generator.py`)",
+                why: "Provides complete audio-visual accessibility and localized voice narration."
+            },
+            {
+                title: "13. Final Video Composition & FFmpeg Render",
+                does: "Cuts visual summary clips, mutes original audio, muxes AI voiceover, and burns subtitles onto output video.",
+                input: "Selected shot intervals, merged visual stream, narration MP3, SRT subtitles file.",
+                process: "Cuts clips via FFmpeg `-c copy`, merges clips, applies subtitle filter (`-vf subtitles='...'`), muxes audio (`-map 0:v:0 -map 1:a:0`), and encodes final MP4.",
+                output: "Final composite summarized MP4 video file.",
+                tech: "FFmpeg CLI subprocess execution (`video_processing/video_merger.py`)",
+                why: "Produces a single broadcast-ready MP4 summary file ready for web playback."
+            }
+        ];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Scroll Progress Indicator
+            window.addEventListener('scroll', () => {
+                const winScroll = document.documentElement.scrollTop || document.body.scrollTop;
+                const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+                const scrolled = (winScroll / height) * 100;
+                document.getElementById('progress-bar').style.width = scrolled + '%';
+            });
+
+            // Interactive Flowchart Modal Popup
+            const modal = document.getElementById('modal-popup');
+            const closeBtn = document.getElementById('modal-close');
+
+            document.querySelectorAll('.flow-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const idx = card.getAttribute('data-idx');
+                    const d = stepDetails[idx];
+                    if (d) {
+                        document.getElementById('m-title').innerText = d.title;
+                        document.getElementById('m-does').innerText = d.does;
+                        document.getElementById('m-input').innerText = d.input;
+                        document.getElementById('m-process').innerText = d.process;
+                        document.getElementById('m-output').innerText = d.output;
+                        document.getElementById('m-tech').innerText = d.tech;
+                        document.getElementById('m-why').innerText = d.why;
+                        modal.classList.add('active');
+                    }
+                });
+            });
+
+            closeBtn.addEventListener('click', () => modal.classList.remove('active'));
+            modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('active'); });
+
+            // Global Realtime Search Filter
+            const searchInput = document.getElementById('search-input');
+            searchInput.addEventListener('input', (e) => {
+                const q = e.target.value.toLowerCase().trim();
+                
+                document.querySelectorAll('.flow-card').forEach(card => {
+                    card.style.display = card.innerText.toLowerCase().includes(q) ? 'flex' : 'none';
+                });
+                document.querySelectorAll('.mod-card').forEach(card => {
+                    card.style.display = card.innerText.toLowerCase().includes(q) ? 'flex' : 'none';
+                });
+                document.querySelectorAll('.tech-box').forEach(card => {
+                    card.style.display = card.innerText.toLowerCase().includes(q) ? 'block' : 'none';
+                });
+            });
+
+            // Back to Top Button
+            document.getElementById('btn-top').addEventListener('click', () => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+
+            // Guide Presentation Mode State Machine
+            const guideBtn = document.getElementById('btn-guide-toggle');
+            const presBar = document.getElementById('pres-bar');
+            const presPrev = document.getElementById('pres-prev');
+            const presNext = document.getElementById('pres-next');
+            const presExit = document.getElementById('pres-exit');
+            const presText = document.getElementById('pres-text');
+
+            let step = 0;
+            const flowCards = document.querySelectorAll('.flow-card');
+
+            function showStep() {
+                flowCards.forEach(c => c.classList.remove('highlight-node'));
+                if (flowCards[step]) {
+                    flowCards[step].classList.add('highlight-node');
+                    flowCards[step].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    presText.innerText = `Step ${step + 1} of ${flowCards.length}`;
+                }
+            }
+
+            guideBtn.addEventListener('click', () => {
+                presBar.classList.add('active');
+                step = 0;
+                showStep();
+            });
+
+            presNext.addEventListener('click', () => {
+                if (step < flowCards.length - 1) { step++; showStep(); }
+            });
+
+            presPrev.addEventListener('click', () => {
+                if (step > 0) { step--; showStep(); }
+            });
+
+            presExit.addEventListener('click', () => {
+                presBar.classList.remove('active');
+                flowCards.forEach(c => c.classList.remove('highlight-node'));
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+flask
+torch
+torchvision
+opencv-python
+numpy
+pandas
+scikit-learn
+whisper
+faster-whisper
+sentence-transformers
+transformers
+nltk
+rouge-score
+gtts
+deep-translator
+yt-dlp

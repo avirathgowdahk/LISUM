@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Academic Lecture Summarization Dashboard | AI Lecture Summarizer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    <!-- ===============================================================================
+         FIXED TOP NAVIGATION BAR
+         =============================================================================== -->
+    <header>
+        <a href="/" class="logo">
+            <div class="logo-icon">🎓</div>
+            <span>AI Lecture Summarizer</span>
+            <span class="logo-subtitle">Intelligent Academic Video Analysis</span>
+        </a>
+
+        <ul class="nav-links">
+            <li><a href="#section-overview" class="active">Overview</a></li>
+            <li><a href="#section-videos">Video Comparison</a></li>
+            <li><a href="#section-summary-text">Summary</a></li>
+            <li><a href="#section-topic-timeline">Timeline</a></li>
+            <li><a href="#section-transcript">Transcript</a></li>
+            <li><a href="#section-alignment">Alignment</a></li>
+            <li><a href="#section-downloads">Downloads</a></li>
+        </ul>
+
+        <div class="header-actions">
+            <div class="nav-badge">
+                <span class="nav-badge-dot"></span>
+                <span>Analysis Completed</span>
+            </div>
+            <a href="/" class="timestamp-btn" style="text-decoration: none; padding: 0.45rem 0.9rem; font-size: 0.85rem;">
+                ← Process Another Video
+            </a>
+        </div>
+    </header>
+
+    <!-- ===============================================================================
+         APP LAYOUT: DESKTOP SIDEBAR + MAIN WORKSPACE
+         =============================================================================== -->
+    <div class="app-layout">
+        
+        <!-- LEFT COLLAPSIBLE DESKTOP SIDEBAR -->
+        <aside class="sidebar-nav">
+            <div class="sidebar-section-title">OVERVIEW</div>
+            <a href="#section-overview" class="sidebar-link active">
+                <span class="sidebar-icon">📊</span>
+                <span>Dashboard</span>
+            </a>
+            <a href="#section-videos" class="sidebar-link">
+                <span class="sidebar-icon">🎬</span>
+                <span>Video Comparison</span>
+            </a>
+
+            <div class="sidebar-section-title" style="margin-top: 1rem;">ANALYSIS</div>
+            <a href="#section-summary-text" class="sidebar-link">
+                <span class="sidebar-icon">📝</span>
+                <span>AI Summary</span>
+            </a>
+            <a href="#section-topic-timeline" class="sidebar-link">
+                <span class="sidebar-icon">⏱️</span>
+                <span>Lecture Timeline</span>
+            </a>
+            <a href="#section-transcript" class="sidebar-link">
+                <span class="sidebar-icon">💬</span>
+                <span>Transcript</span>
+            </a>
+            <a href="#section-alignment" class="sidebar-link">
+                <span class="sidebar-icon">🎯</span>
+                <span>Timestamp Alignment</span>
+            </a>
+
+            <div class="sidebar-section-title" style="margin-top: 1rem;">OUTPUT</div>
+            <a href="#section-downloads" class="sidebar-link">
+                <span class="sidebar-icon">📥</span>
+                <span>Download Center</span>
+            </a>
+        </aside>
+
+        <!-- MAIN WORKSPACE -->
+        <main class="main-workspace">
+            
+            <!-- HERO / LECTURE HEADER -->
+            <section class="hero-banner">
+                <div class="hero-content">
+                    <span class="hero-label">AI-POWERED ACADEMIC VIDEO ANALYSIS</span>
+                    <h1 class="hero-title">{{ original_filename|replace('.mp4','')|replace('_',' ')|title }}</h1>
+                    <p class="hero-subtitle">
+                        Automatically transcribed, summarized, analyzed, and generated concise lecture video while preserving important timestamps, context, and original lecturer audio.
+                    </p>
+                </div>
+
+                <div class="hero-graphic" style="flex-direction: column; gap: 0.5rem; align-items: flex-end;">
+                    <div class="stat-pill">
+                        <span class="stat-pill-label">Original Duration:</span>
+                        <span class="stat-pill-val">{{ original_duration|timefmt }}</span>
+                    </div>
+                    <div class="stat-pill">
+                        <span class="stat-pill-label">Summary Video:</span>
+                        <span class="stat-pill-val" style="color: var(--accent);">{{ summary_duration|timefmt }}</span>
+                    </div>
+                    <div class="stat-pill">
+                        <span class="stat-pill-label">Compression:</span>
+                        <span class="stat-pill-val" style="color: var(--accent-pink);">{{ compression_percent }}%</span>
+                    </div>
+                    <div class="stat-pill">
+                        <span class="stat-pill-label">Language:</span>
+                        <span class="stat-pill-val" style="color: var(--secondary);">{{ target_language }}</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 1 — LECTURE OVERVIEW -->
+            <section class="overview-card-grid" id="section-overview">
+                <div class="overview-box">
+                    <div class="box-label">📹 Original Lecture</div>
+                    <div class="box-val">{{ original_duration|timefmt }}</div>
+                </div>
+                <div class="overview-box">
+                    <div class="box-label">🎯 Target Duration</div>
+                    <div class="box-val" style="color: var(--accent);">{{ target_duration_sec|timefmt }}</div>
+                </div>
+                <div class="overview-box">
+                    <div class="box-label">⚡ Final Summary Video</div>
+                    <div class="box-val" style="color: var(--success);">{{ summary_duration|timefmt }} approx</div>
+                </div>
+                <div class="overview-box">
+                    <div class="box-label">📉 Compression Ratio</div>
+                    <div class="box-val" style="color: var(--accent-pink);">{{ compression_percent }}%</div>
+                </div>
+                <div class="overview-box">
+                    <div class="box-label">🌐 Output Language</div>
+                    <div class="box-val" style="color: var(--secondary);">{{ target_language }}</div>
+                </div>
+                <div class="overview-box">
+                    <div class="box-label">🎙️ Spoken Audio</div>
+                    <div class="box-val" style="color: var(--success); font-size: 0.95rem; margin-top: 0.5rem;">Original Lecturer</div>
+                </div>
+                <div class="overview-box">
+                    <div class="box-label">💬 Subtitles / Captions</div>
+                    <div class="box-val" style="font-size: 0.95rem; margin-top: 0.5rem;">{{ caption_mode_display }}</div>
+                </div>
+                <div class="overview-box">
+                    <div class="box-label">🧠 Engine</div>
+                    <div class="box-val" style="font-size: 0.95rem; margin-top: 0.5rem;">Hybrid AI</div>
+                </div>
+            </section>
+
+            <!-- SECTIONS 2 & 3 — SIDE-BY-SIDE VIDEO COMPARISON -->
+            <section id="section-videos">
+                <h2 class="section-title">🎬 Lecture Video Comparison</h2>
+                
+                <div class="video-comparison-grid">
+                    <!-- Left: Original Video -->
+                    <div class="video-card">
+                        <div class="video-card-header">
+                            <div class="video-card-title">
+                                <span>Original Lecture Video</span>
+                            </div>
+                            <span class="tag-badge orig">SOURCE VIDEO</span>
+                        </div>
+                        <div class="video-player-frame">
+                            <video id="originalVideoPlayer" controls src="{{ original_video_url }}"></video>
+                        </div>
+                        <div class="video-meta-footer">
+                            <div><strong>Filename:</strong> {{ original_filename }}</div>
+                            <div><strong>Duration:</strong> {{ original_duration|timefmt }}</div>
+                            <div><strong>Resolution:</strong> {{ video_resolution }}</div>
+                            <div><strong>Audio:</strong> Original Lecturer Voice</div>
+                        </div>
+                    </div>
+
+                    <!-- Right: AI Summarized Video -->
+                    <div class="video-card ai-card">
+                        <div class="video-card-header">
+                            <div class="video-card-title" style="color: #A5B4FC;">
+                                <span>AI Summarized Lecture Video</span>
+                            </div>
+                            <span class="tag-badge ai">AI SUMMARIZED</span>
+                        </div>
+                        <div class="video-player-frame">
+                            <video id="summaryVideoPlayer" controls autoplay src="{{ summary_video_url }}"></video>
+                        </div>
+                        <div class="video-meta-footer" style="background: rgba(99, 102, 241, 0.1); border-color: rgba(99, 102, 241, 0.2);">
+                            <div><strong>Duration:</strong> {{ summary_duration|timefmt }} approx</div>
+                            <div><strong>Audio:</strong> Original Lecturer Voice</div>
+                            <div><strong>Captions:</strong> {{ caption_mode_display }}</div>
+                            <div><strong>Summarization:</strong> Hybrid AI</div>
+                        </div>
+
+                        <div class="verification-checklist">
+                            <div class="v-check-item">✓ Original lecturer voice preserved</div>
+                            <div class="v-check-item">✓ Audio synchronized with video</div>
+                            <div class="v-check-item">✓ Selected lecture segments only</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 4 — CONCISE LECTURE SUMMARY & ALIGNMENT -->
+            <section class="summary-container-card" id="section-summary-text">
+                <h2 class="section-title">📝 AI-Generated Lecture Summary</h2>
+
+                <div class="summary-stats-banner">
+                    <div class="summary-stat-item">
+                        <span class="summary-stat-label">Important Topics</span>
+                        <span class="summary-stat-val">{{ structured_sections|length }}</span>
+                    </div>
+                    <div class="summary-stat-item">
+                        <span class="summary-stat-label">Key Concepts</span>
+                        <span class="summary-stat-val">{{ summary_statements|length }}</span>
+                    </div>
+                    <div class="summary-stat-item">
+                        <span class="summary-stat-label">Estimated Reading Time</span>
+                        <span class="summary-stat-val" style="color: var(--accent);">2 min</span>
+                    </div>
+                    <div class="summary-stat-item">
+                        <span class="summary-stat-label">Compression Ratio</span>
+                        <span class="summary-stat-val" style="color: var(--accent-pink);">{{ compression_percent }}%</span>
+                    </div>
+                </div>
+                
+                <div class="topic-cards-grid">
+                    {% for sec in structured_sections %}
+                        <div class="topic-card">
+                            <div class="topic-card-header">
+                                <div class="topic-number-title">
+                                    <span class="topic-num-badge">{{ "%02d"|format(loop.index) }}</span>
+                                    <span class="topic-card-title">{{ (sec.title if (sec is mapping and sec.title is defined) else sec)|replace('###', '')|trim }}</span>
+                                </div>
+                                <button class="timestamp-btn" onclick="seekOriginalVideo({{ sec.start_time if (sec is mapping and sec.start_time is defined) else 0.0 }})">
+                                    ⏱️ {{ (sec.start_time if (sec is mapping and sec.start_time is defined) else 0.0)|timefmt }}
+                                </button>
+                            </div>
+                            <ul class="academic-bullets">
+                                {% if sec is mapping and sec.bullets is defined %}
+                                    {% for bullet in sec.bullets %}
+                                        <li>{{ bullet }}</li>
+                                    {% endfor %}
+                                {% elif sec is mapping and sec.content is defined %}
+                                    <li>{{ sec.content }}</li>
+                                {% else %}
+                                    <li>{{ sec }}</li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    {% else %}
+                        <div class="topic-card">
+                            <p style="color: var(--text-secondary); line-height: 1.6;">{{ text_summary }}</p>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <!-- SUMMARY TO VIDEO ALIGNMENT TABLE -->
+                <div id="section-alignment" style="margin-top: 2.5rem;">
+                    <h3 style="font-family: 'Outfit', sans-serif; font-size: 1.2rem; margin-bottom: 0.4rem; color: var(--text-main);">
+                        🎯 Summary → Video Alignment
+                    </h3>
+                    <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 1rem;">
+                        Each AI-generated summary point is linked to the corresponding section of the original lecture.
+                    </p>
+
+                    <div class="table-card">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 5%;">#</th>
+                                    <th style="width: 50%;">Summary Point</th>
+                                    <th style="width: 20%;">Original Timestamp</th>
+                                    <th style="width: 15%;">Similarity</th>
+                                    <th style="width: 10%;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for stmt in summary_statements %}
+                                    {% set start_val = stmt.start if stmt.start is defined else stmt.start_time %}
+                                    {% set end_val = stmt.end if stmt.end is defined else stmt.end_time %}
+                                    {% set sim_val = stmt.similarity if stmt.similarity is defined else stmt.similarity_score %}
+                                    {% set sim_pct = (sim_val * 100)|int if sim_val else 95 %}
+                                    <tr>
+                                        <td style="color: var(--text-dim); font-weight: 600;">{{ stmt.statement_id }}</td>
+                                        <td>{{ stmt.text }}</td>
+                                        <td>
+                                            <button class="timestamp-btn" onclick="seekOriginalVideo({{ start_val }})">
+                                                ⏱️ {{ start_val|timefmt }}–{{ end_val|timefmt }}
+                                            </button>
+                                        </td>
+                                        <td>
+                                            <div class="sim-bar-container">
+                                                <div class="sim-bar-bg">
+                                                    <div class="sim-bar-fill" style="width: {{ sim_pct }}%;"></div>
+                                                </div>
+                                                <span class="sim-pct-val">{{ sim_pct }}%</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <button class="timestamp-btn" onclick="seekOriginalVideo({{ start_val }})" style="background: rgba(34, 197, 94, 0.15); border-color: rgba(34, 197, 94, 0.4); color: #4ADE80;">
+                                                ▶ Watch
+                                            </button>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 5 — LECTURE TOPIC TIMELINE -->
+            <section class="timeline-card" id="section-topic-timeline">
+                <h2 class="section-title">⏱️ Lecture Topic Timeline</h2>
+                <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 1.25rem;">
+                    Chronological lecture section progression. Click any topic or timestamp to seek the original lecture video.
+                </p>
+
+                <div class="timeline-list">
+                    {% for topic in topic_timeline %}
+                        {% set t_time = topic.start_time if (topic is mapping and topic.start_time is defined) else 0.0 %}
+                        {% set t_title = (topic.title if (topic is mapping and topic.title is defined) else topic)|replace('###', '')|trim %}
+                        {% set t_desc = (topic.key_point if (topic is mapping and topic.key_point is defined) else (topic.bullet if (topic is mapping and topic.bullet is defined) else '')) %}
+                        <div class="timeline-node-item" onclick="seekOriginalVideo({{ t_time }})">
+                            <div class="timeline-ts-pill">
+                                <button class="timestamp-btn">
+                                    ⏱️ {{ t_time|timefmt }}
+                                </button>
+                            </div>
+                            <div class="timeline-content-block">
+                                <div class="timeline-item-title">{{ t_title }}</div>
+                                {% if t_desc %}
+                                    <div class="timeline-item-desc">{{ t_desc }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% else %}
+                        <p style="color: var(--text-muted);">No topic timeline available.</p>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <!-- SECTION 6 — TIMESTAMPED TRANSCRIPT -->
+            <section class="transcript-card" id="section-transcript">
+                <h2 class="section-title">💬 Timestamped Transcript</h2>
+                <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 1rem;">
+                    Search and navigate through the complete timestamped lecture transcript.
+                </p>
+
+                <input type="text" id="transcriptSearchInput" class="transcript-search-box" placeholder="🔍 Search transcript keywords..." onkeyup="filterTranscript()">
+
+                <div id="transcriptContainer" class="transcript-viewport">
+                    {% for sent in timestamped_sentences %}
+                        <div class="transcript-row" onclick="seekOriginalVideo({{ sent.start_time }})">
+                            <button class="timestamp-btn">
+                                ⏱️ {{ sent.start_time|timefmt }}
+                            </button>
+                            <span class="transcript-text-span">
+                                {{ sent.text }}
+                            </span>
+                        </div>
+                    {% else %}
+                        <p style="color: var(--text-muted);">No transcript sentences available.</p>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <!-- SECTION 7 — DOWNLOAD CENTER -->
+            <section class="download-card-wrapper" id="section-downloads">
+                <h2 class="section-title">📥 Download Your Results</h2>
+                <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 1.25rem;">
+                    Download machine-readable outputs, short summarized video, transcript, and subtitles.
+                </p>
+
+                <div class="download-grid-4">
+                    <a href="/api/download/{{ job_id }}/video" class="dl-card">
+                        <div>
+                            <div class="dl-card-icon">🎬</div>
+                            <div class="dl-card-title">Summarized Video</div>
+                            <div class="dl-card-desc">MP4 video with original lecturer voice & audio</div>
+                        </div>
+                        <div class="dl-card-btn">Download MP4 →</div>
+                    </a>
+
+                    <a href="/api/download/{{ job_id }}/summary" class="dl-card">
+                        <div>
+                            <div class="dl-card-icon">📄</div>
+                            <div class="dl-card-title">Summary Text</div>
+                            <div class="dl-card-desc">Structured academic summary text file</div>
+                        </div>
+                        <div class="dl-card-btn">Download TXT →</div>
+                    </a>
+
+                    <a href="/api/download/{{ job_id }}/transcript" class="dl-card">
+                        <div>
+                            <div class="dl-card-icon">📝</div>
+                            <div class="dl-card-title">Full Transcript</div>
+                            <div class="dl-card-desc">Complete timestamped lecture transcript</div>
+                        </div>
+                        <div class="dl-card-btn">Download TXT →</div>
+                    </a>
+
+                    <a href="/api/download/{{ job_id }}/subtitles" class="dl-card">
+                        <div>
+                            <div class="dl-card-icon">💬</div>
+                            <div class="dl-card-title">Subtitles File</div>
+                            <div class="dl-card-desc">Synchronized SRT subtitles captions file</div>
+                        </div>
+                        <div class="dl-card-btn">Download SRT →</div>
+                    </a>
+
+                    <a href="/api/download/{{ job_id }}/json" class="dl-card">
+                        <div>
+                            <div class="dl-card-icon">📊</div>
+                            <div class="dl-card-title">Result JSON</div>
+                            <div class="dl-card-desc">Full machine-readable output JSON</div>
+                        </div>
+                        <div class="dl-card-btn">Download JSON →</div>
+                    </a>
+                </div>
+
+                <div style="margin-top: 2rem; text-align: center;">
+                    <a href="/" class="btn-primary" style="background: rgba(30, 41, 59, 0.8); border: 1px solid var(--border-card); text-decoration: none; display: inline-block; padding: 0.8rem 2.5rem; width: auto;">
+                        🔄 Process Another Lecture Video
+                    </a>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <footer>
+        AI Lecture Summarizer &copy; 2026. Intelligent Academic Video Processing & Summarization System.
+    </footer>
+
+    <script>
+        function seekOriginalVideo(seconds) {
+            const player = document.getElementById('originalVideoPlayer');
+            if (player) {
+                player.currentTime = seconds;
+                player.play();
+                player.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function filterTranscript() {
+            const input = document.getElementById('transcriptSearchInput');
+            const filter = input.value.toLowerCase();
+            const rows = document.querySelectorAll('.transcript-row');
+
+            rows.forEach(row => {
+                const textSpan = row.querySelector('.transcript-text-span');
+                if (textSpan) {
+                    const text = textSpan.textContent || textSpan.innerText;
+                    if (text.toLowerCase().indexOf(filter) > -1) {
+                        row.style.display = 'flex';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                }
+            });
+        }
+
+        // Active sidebar scrollspy highlight
+        window.addEventListener('scroll', () => {
+            const sections = document.querySelectorAll('section[id]');
+            const scrollY = window.pageYOffset;
+
+            sections.forEach(current => {
+                const sectionHeight = current.offsetHeight;
+                const sectionTop = current.offsetTop - 100;
+                const sectionId = current.getAttribute('id');
+                const sidebarLink = document.querySelector(`.sidebar-link[href*="${sectionId}"]`);
+                const navLink = document.querySelector(`.nav-links a[href*="${sectionId}"]`);
+
+                if (scrollY > sectionTop && scrollY <= sectionTop + sectionHeight) {
+                    document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+                    document.querySelectorAll('.nav-links a').forEach(l => l.classList.remove('active'));
+                    if (sidebarLink) sidebarLink.classList.add('active');
+                    if (navLink) navLink.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+Category,Method,Precision,Recall,F1 Score,Avg Processing Time (s)
+Baseline,Random,0.0,0.0,0.0,0.0006
+Baseline,Importance-Only,0.1842,0.1842,0.1842,0.0001
+Baseline,Importance+Diversity,0.1842,0.1842,0.1842,0.0001
+Baseline,Proposed (Knapsack),0.6711,0.6711,0.6711,0.0207
+Ablation,Exp A (Transformer Only),0.1842,0.1842,0.1842,0.0142
+Ablation,Exp B (Transformer + Diversity),0.1842,0.1842,0.1842,0.0142
+Ablation,Exp C (Transformer + Knapsack),0.7369,0.7369,0.7369,0.0142
+Ablation,Exp D (Full Proposed System),0.7369,0.7369,0.7369,0.0142
