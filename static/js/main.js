@@ -84,7 +84,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({ url: urlVal })
             });
 
-            const data = await res.json();
+            const rawText = await res.text();
+            let data = {};
+            try {
+                data = JSON.parse(rawText);
+            } catch (_) {
+                data = { error: `Server returned status ${res.status}: ${rawText.slice(0, 200)}` };
+            }
             fetchUrlBtn.disabled = false;
             uploadSpinner.style.display = 'none';
 
@@ -113,37 +119,59 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Prevent browser from navigating away if file is dropped outside dropzone
+    document.addEventListener('dragover', (e) => e.preventDefault());
+    document.addEventListener('drop', (e) => e.preventDefault());
+
     // Drag and Drop handlers
-    uploadZone.addEventListener('dragover', (e) => {
+    uploadZone.addEventListener('dragenter', (e) => {
         e.preventDefault();
+        e.stopPropagation();
         uploadZone.classList.add('dragover');
     });
 
-    uploadZone.addEventListener('dragleave', () => {
+    uploadZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        uploadZone.classList.add('dragover');
+    });
+
+    uploadZone.addEventListener('dragleave', (e) => {
+        e.stopPropagation();
         uploadZone.classList.remove('dragover');
     });
 
     uploadZone.addEventListener('drop', (e) => {
         e.preventDefault();
+        e.stopPropagation();
         uploadZone.classList.remove('dragover');
         if (e.dataTransfer.files.length > 0) {
             uploadVideoFile(e.dataTransfer.files[0]);
         }
     });
 
-    uploadZone.addEventListener('click', () => {
+    fileInput.addEventListener('click', (e) => {
+        e.stopPropagation();
+    });
+
+    uploadZone.addEventListener('click', (e) => {
+        if (e.target === fileInput) return;
+        fileInput.value = '';
         fileInput.click();
     });
 
     fileInput.addEventListener('change', () => {
         if (fileInput.files.length > 0) {
-            uploadVideoFile(fileInput.files[0]);
+            const selectedFile = fileInput.files[0];
+            fileInput.value = '';
+            uploadVideoFile(selectedFile);
         }
     });
 
     async function uploadVideoFile(file) {
         const allowed = ['.mp4', '.avi', '.mov', '.mkv', '.webm'];
-        const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+        const dotIdx = file.name.lastIndexOf('.');
+        const ext = dotIdx >= 0 ? file.name.substring(dotIdx).toLowerCase() : '';
         
         if (!allowed.includes(ext)) {
             alert(`Unsupported file format. Allowed: ${allowed.join(', ')}`);
@@ -164,14 +192,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: formData
             });
 
-            const data = await res.json();
+            const rawText = await res.text();
+            let data = {};
+            try {
+                data = JSON.parse(rawText);
+            } catch (_) {
+                data = { error: `Server returned status ${res.status}: ${rawText.slice(0, 200)}` };
+            }
+
             uploadSpinner.style.display = 'none';
             uploadZone.style.opacity = '1';
             uploadZone.style.pointerEvents = 'auto';
 
             if (!res.ok || data.error) {
                 alert(`Upload Error: ${data.error || 'Failed to parse video metadata'}`);
-                location.reload();
                 return;
             }
 
@@ -184,7 +218,6 @@ document.addEventListener('DOMContentLoaded', () => {
             uploadZone.style.opacity = '1';
             uploadZone.style.pointerEvents = 'auto';
             alert(`Network error uploading video: ${err.message}`);
-            location.reload();
         }
     }
 
@@ -206,6 +239,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const chipSec = chip.dataset.seconds;
             if (chipSec !== 'custom' && parseFloat(chipSec) >= origSec) {
                 chip.classList.add('disabled');
+                chip.classList.remove('active');
                 chip.style.opacity = '0.4';
                 chip.style.pointerEvents = 'none';
             } else {
@@ -220,10 +254,36 @@ document.addEventListener('DOMContentLoaded', () => {
         if (defaultChip) {
             durationChips.forEach(c => c.classList.remove('active'));
             defaultChip.classList.add('active');
+            if (customDurationBox) customDurationBox.style.display = 'none';
             selectedDurationSec = parseFloat(defaultChip.dataset.seconds);
         } else {
             selectedDurationSec = Math.max(5, Math.floor(origSec * 0.3));
+            const customChip = document.querySelector('.duration-chip[data-seconds="custom"]');
+            durationChips.forEach(c => c.classList.remove('active'));
+            if (customChip) customChip.classList.add('active');
+            if (customDurationBox) customDurationBox.style.display = 'block';
+            if (customDurationInput) customDurationInput.value = String(selectedDurationSec);
         }
+    }
+
+    function parseCustomDurationSeconds(rawVal) {
+        if (!rawVal) return null;
+        const trimmed = rawVal.trim();
+        if (!trimmed) return null;
+        if (/^\d+(\.\d+)?$/.test(trimmed)) {
+            const sec = parseFloat(trimmed);
+            return sec > 0 ? sec : null;
+        }
+        const parts = trimmed.split(':').map(p => p.trim());
+        if (parts.length === 2 && parts.every(p => /^\d+$/.test(p))) {
+            const total = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+            return total > 0 ? total : null;
+        }
+        if (parts.length === 3 && parts.every(p => /^\d+$/.test(p))) {
+            const total = parseInt(parts[0], 10) * 3600 + parseInt(parts[1], 10) * 60 + parseInt(parts[2], 10);
+            return total > 0 ? total : null;
+        }
+        return null;
     }
 
     // Duration chip selection
@@ -236,6 +296,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const val = chip.dataset.seconds;
             if (val === 'custom') {
                 customDurationBox.style.display = 'block';
+                const parsed = parseCustomDurationSeconds(customDurationInput.value);
+                if (parsed) selectedDurationSec = parsed;
             } else {
                 customDurationBox.style.display = 'none';
                 selectedDurationSec = parseFloat(val);
@@ -243,6 +305,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+
+    if (customDurationInput) {
+        customDurationInput.addEventListener('input', () => {
+            const parsed = parseCustomDurationSeconds(customDurationInput.value);
+            if (parsed) {
+                selectedDurationSec = parsed;
+            }
+        });
+    }
 
     // Language chip selection
     langChips.forEach(chip => {
@@ -255,6 +326,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Start Summarization Button Click
     startSummarizeBtn.addEventListener('click', async () => {
+        const activeDurChip = document.querySelector('.duration-chip.active');
+        if (activeDurChip && activeDurChip.dataset.seconds === 'custom') {
+            const parsed = parseCustomDurationSeconds(customDurationInput ? customDurationInput.value : '');
+            if (!parsed) {
+                alert('Please enter a valid custom duration (e.g. 03:30 or 210).');
+                return;
+            }
+            selectedDurationSec = parsed;
+        }
         if (!uploadedVideoData || !selectedDurationSec) return;
 
         const summaryTypeRadio = document.querySelector('input[name="summaryType"]:checked');
@@ -364,7 +444,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const stageOrder = [
             'VALIDATING', 'EXTRACTING_AUDIO', 'PREPROCESSING_AUDIO', 'TRANSCRIBING',
             'POST_PROCESSING_TRANSCRIPT', 'ANALYZING_TRANSCRIPT', 'SCORING_IMPORTANCE',
-            'GENERATING_SUMMARY', 'ALIGNING_SUMMARY', 'SELECTING_SEGMENTS',
+            'GENERATING_SUMMARY', 'ALIGNING_SUMMARY', 'SELECTING_SEGMENTS', 'TRANSLATING',
             'EXTRACTING_CLIPS', 'JOINING_CLIPS', 'PREPARING_SUBTITLES', 'FINALIZING', 'COMPLETED'
         ];
 

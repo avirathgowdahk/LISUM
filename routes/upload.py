@@ -40,6 +40,7 @@ def handle_upload():
     file_id = str(uuid.uuid4())[:8]
     filename = f"{file_id}_{secure_filename(file.filename)}"
     upload_folder = current_app.config['UPLOAD_FOLDER']
+    os.makedirs(upload_folder, exist_ok=True)
     video_path = os.path.join(upload_folder, filename)
     file.save(video_path)
 
@@ -56,6 +57,11 @@ def handle_upload():
             "metadata": meta
         })
     except Exception as e:
+        if os.path.exists(video_path):
+            try:
+                os.remove(video_path)
+            except Exception:
+                pass
         return jsonify({"error": f"Video validation failed: {str(e)}"}), 400
 
 @upload_bp.route('/api/url', methods=['POST'])

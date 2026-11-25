@@ -149,6 +149,12 @@ def validate_media_file(filepath: str) -> Dict[str, Any]:
         meta = get_video_metadata(abs_path)
         if meta.get("duration_seconds", 0) <= 0:
             raise RuntimeError(f"Invalid video file with zero duration: {abs_path}")
+        try:
+            from utils.ffmpeg_utils import get_media_metadata
+            ff_meta = get_media_metadata(abs_path)
+            meta.update({k: v for k, v in ff_meta.items() if k not in ("filename", "file_path")})
+        except Exception:
+            pass
         return meta
     except Exception as e:
         raise RuntimeError(f"FFprobe/OpenCV validation failed for '{abs_path}': {str(e)}")

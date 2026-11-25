@@ -49,7 +49,7 @@ def get_summary_json(job_id: str):
     res = job["result"]
     return jsonify({
         "lecture_id": res["lecture_id"],
-        "summary": res["summary_text"],
+        "summary": res.get("translated_summary_text") or res["summary_text"],
         "statements": res["summary_statements"],
         "topic_bullets": res["topic_bullets"]
     })
@@ -76,6 +76,7 @@ def download_output_file(job_id: str, file_type: str):
 
     res = job["result"]
     out_dir = current_app.config['OUTPUT_FOLDER']
+    os.makedirs(out_dir, exist_ok=True)
 
     if file_type == 'video':
         path = res["output_summary_video"]

@@ -33,7 +33,7 @@ from services.alignment_service import align_summary_to_transcript
 from services.segment_service import select_optimal_video_segments
 from services.video_composer import compose_final_lecture_video
 from services.subtitle_service import generate_subtitles_and_keywords
-from services.translation_service import translate_lecture_summary
+from services.translation_service import translate_lecture_summary, translate_structured_outputs
 
 CACHE_DIR = os.path.join("cache", "pipeline")
 
@@ -223,18 +223,39 @@ def run_lecture_processing_pipeline(
         # STAGE 9: Subtitles, Translation & Final Video Composition with ORIGINAL AUDIO (92–100%)
         # -------------------------------------------------------------------------
         t0 = time.time()
-        update_status("TRANSLATING", 92, f"Translating summary & generating SRT subtitles ({target_language.upper()})...")
+        update_status("TRANSLATING", 92, f"Translating summary, transcript & generating SRT subtitles ({target_language.upper()})...")
         translated_summary_text = translate_lecture_summary(aligned_summary.text, target_language=target_language)
 
-        srt_path = os.path.join("outputs", "subtitles", f"{job_id}_{target_language}.srt")
+        raw_structured_sections = getattr(aligned_summary, "structured_sections", [])
+        raw_summary_statements = [st.to_dict() for st in aligned_summary.statements]
+        raw_topic_timeline = getattr(aligned_summary, "topic_timeline", [])
+        raw_timestamped_sentences = [s.to_dict() for s in sentences]
+
+        (
+            out_structured_sections,
+            out_summary_statements,
+            out_topic_timeline,
+            out_timestamped_sentences,
+            out_raw_transcript,
+        ) = translate_structured_outputs(
+            target_language=target_language,
+            structured_sections=raw_structured_sections,
+            summary_statements=raw_summary_statements,
+            topic_timeline=raw_topic_timeline,
+            timestamped_sentences=raw_timestamped_sentences,
+            raw_transcript=transcript_text,
+        )
+
+        subtitle_lang = target_language if caption_option == "translated" else "en"
+        srt_path = os.path.join("outputs", "subtitles", f"{job_id}_{subtitle_lang}.srt")
         srt_file, keywords = generate_subtitles_and_keywords(
-            summary_text=translated_summary_text,
+            summary_text=translated_summary_text if caption_option == "translated" else aligned_summary.text,
             total_duration_sec=selected_clip_duration,
             output_srt_path=srt_path,
             stt_segments=[s.to_dict() for s in raw_segments],
             selected_segments=final_clip_tuples,
             audio_mode=audio_mode,
-            target_language=target_language
+            target_language=subtitle_lang
         )
 
         output_video_path = os.path.join("outputs", f"{os.path.splitext(video_meta['filename'])[0]}_summary_{job_id}.mp4")
@@ -273,14 +294,14 @@ def run_lecture_processing_pipeline(
             "caption_option": caption_option,
             "audio_mode": audio_mode,
             "detected_language": detected_lang,
-            "raw_transcript": transcript_text,
-            "timestamped_sentences": [s.to_dict() for s in sentences],
+            "raw_transcript": out_raw_transcript,
+            "timestamped_sentences": out_timestamped_sentences,
             "topic_sections": topic_sections,
-            "structured_sections": getattr(aligned_summary, "structured_sections", []),
-            "topic_timeline": getattr(aligned_summary, "topic_timeline", []),
+            "structured_sections": out_structured_sections,
+            "topic_timeline": out_topic_timeline,
             "summary_text": aligned_summary.text,
             "translated_summary_text": translated_summary_text,
-            "summary_statements": [st.to_dict() for st in aligned_summary.statements],
+            "summary_statements": out_summary_statements,
             "topic_bullets": aligned_summary.topic_bullets,
             "selected_clips": [c.to_dict() for c in video_clips],
             "selected_clip_tuples": final_clip_tuples,

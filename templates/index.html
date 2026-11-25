@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Lecture Video Transcription, Intelligent Summarization & Short Video Generation</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v='20261125') }}">
 </head>
 <body>
 
@@ -43,22 +43,22 @@
                 <span>Lecture Upload</span>
             </a>
 
-            <div class="sidebar-section-title" style="margin-top: 1rem;">ANALYSIS</div>
-            <a href="#" class="sidebar-link" style="opacity: 0.5; pointer-events: none;">
+            <div class="sidebar-section-title" style="margin-top: 0.75rem;">ANALYSIS</div>
+            <a href="#" class="sidebar-link disabled">
                 <span class="sidebar-icon">📝</span>
                 <span>Summary</span>
             </a>
-            <a href="#" class="sidebar-link" style="opacity: 0.5; pointer-events: none;">
+            <a href="#" class="sidebar-link disabled">
                 <span class="sidebar-icon">⏱️</span>
                 <span>Timeline</span>
             </a>
-            <a href="#" class="sidebar-link" style="opacity: 0.5; pointer-events: none;">
+            <a href="#" class="sidebar-link disabled">
                 <span class="sidebar-icon">💬</span>
                 <span>Transcript</span>
             </a>
 
-            <div class="sidebar-section-title" style="margin-top: 1rem;">OUTPUT</div>
-            <a href="#" class="sidebar-link" style="opacity: 0.5; pointer-events: none;">
+            <div class="sidebar-section-title" style="margin-top: 0.75rem;">OUTPUT</div>
+            <a href="#" class="sidebar-link disabled">
                 <span class="sidebar-icon">📥</span>
                 <span>Downloads</span>
             </a>
@@ -82,12 +82,12 @@
                         <div class="graphic-badge-title">Speech-to-Text</div>
                         <div class="graphic-badge-val">Whisper ASR</div>
                     </div>
-                    <div style="color: var(--text-dim); font-size: 1.2rem;">→</div>
+                    <div class="hero-arrow">→</div>
                     <div class="graphic-badge">
                         <div class="graphic-badge-title">Summarization</div>
                         <div class="graphic-badge-val">Hybrid AI</div>
                     </div>
-                    <div style="color: var(--text-dim); font-size: 1.2rem;">→</div>
+                    <div class="hero-arrow">→</div>
                     <div class="graphic-badge">
                         <div class="graphic-badge-title">Composition</div>
                         <div class="graphic-badge-val">Short Video</div>
@@ -97,9 +97,9 @@
 
             <!-- STEP 1: UPLOAD SECTION -->
             <section class="glass-card" id="uploadFormCard">
-                <div style="margin-bottom: 1.5rem;">
+                <div class="card-header-block">
                     <h2 class="section-title" style="margin-bottom: 0.2rem;">Start a New Lecture</h2>
-                    <p style="color: var(--text-muted); font-size: 0.92rem;">Upload a lecture video and let AI extract the most important educational content.</p>
+                    <p class="card-subtitle">Upload a lecture video and let AI extract the most important educational content.</p>
                 </div>
 
                 <!-- Input Mode Switcher -->
@@ -113,8 +113,8 @@
                     <div class="upload-zone" id="uploadZone">
                         <div class="upload-icon-circle">⬆</div>
                         <div class="upload-title">Drop your lecture video here</div>
-                        <div class="upload-hint" style="margin-top: 0.2rem;">or <span style="color: var(--primary); font-weight: 600;">browse files</span> from your computer</div>
-                        <p style="color: var(--text-dim); font-size: 0.8rem; margin-top: 1rem;">
+                        <div class="upload-hint">or <span style="color: var(--primary); font-weight: 600;">browse files</span> from your computer</div>
+                        <p class="upload-formats-note">
                             Supported formats: MP4, AVI, MOV, MKV, WEBM (Maximum 2 GB)
                         </p>
                         <input type="file" id="fileInput" class="file-input" accept=".mp4,.avi,.mov,.mkv,.webm">
@@ -123,38 +123,38 @@
 
                 <!-- Mode 2: Public Video URL Ingestion -->
                 <div id="urlTabContent" style="display: none;">
-                    <div style="text-align: center; padding: 1.5rem 0;">
-                        <div style="font-size: 2.2rem; color: var(--accent); margin-bottom: 0.5rem;">🔗</div>
+                    <div class="url-panel">
+                        <div style="font-size: 2rem; color: var(--primary); margin-bottom: 0.45rem;">🔗</div>
                         <h3 class="upload-title">Paste Public Lecture Video URL</h3>
-                        <p class="upload-hint" style="margin-bottom: 1.5rem;">Enter a public YouTube or web video link for direct ingestion (Lectures up to 3 hours, max 2 GB)</p>
+                        <p class="upload-hint">Enter a public YouTube or web video link for direct ingestion (Lectures up to 3 hours, max 2 GB)</p>
                         
-                        <div style="display: flex; gap: 0.75rem; max-width: 650px; margin: 0 auto;">
-                            <input type="url" id="urlInput" placeholder="https://www.youtube.com/watch?v=..." style="flex: 1; background: rgba(13, 20, 36, 0.8); border: 1px solid var(--border-card); color: white; padding: 0.8rem 1.1rem; border-radius: 10px; font-size: 0.95rem; outline: none;">
-                            <button class="btn-primary" id="fetchUrlBtn" style="width: auto; margin-top: 0; padding: 0.8rem 1.75rem;">
+                        <div class="url-input-row">
+                            <input type="url" id="urlInput" class="text-input-light" placeholder="https://www.youtube.com/watch?v=...">
+                            <button class="btn-primary btn-fetch-url" id="fetchUrlBtn">
                                 <span>Fetch Lecture</span>
                             </button>
                         </div>
-                        <div id="urlErrorText" style="color: #EF4444; font-size: 0.85rem; margin-top: 0.8rem; display: none;"></div>
+                        <div id="urlErrorText" class="url-error-text"></div>
                     </div>
                 </div>
 
                 <!-- Upload Spinner / Loading -->
-                <div id="uploadSpinner" style="display: none; text-align: center; margin-top: 1.5rem; color: var(--accent);">
+                <div id="uploadSpinner" class="upload-spinner-box">
                     <div class="progress-spinner" style="margin: 0 auto 0.5rem auto;"></div>
-                    <p id="spinnerText" style="font-size: 0.95rem;">Validating video file and inspecting metadata...</p>
+                    <p id="spinnerText" style="font-size: 0.94rem;">Validating video file and inspecting metadata...</p>
                 </div>
             </section>
 
             <!-- STEP 2: METADATA VERIFICATION & CONFIGURATION CARD -->
             <section class="glass-card" id="configCard" style="display: none;">
-                <div style="margin-bottom: 1.5rem;">
+                <div class="card-header-block">
                     <h2 class="section-title" style="margin-bottom: 0.2rem;">Lecture Metadata Verified</h2>
-                    <p style="color: var(--text-muted); font-size: 0.92rem;">Review source video details and select your summary preferences.</p>
+                    <p class="card-subtitle">Review source video details and select your summary preferences.</p>
                 </div>
 
                 <div class="metadata-preview-grid">
                     <div class="metadata-preview-player">
-                        <video id="videoPreviewPlayer" controls style="width: 100%; border-radius: 12px; background: black; max-height: 240px;"></video>
+                        <video id="videoPreviewPlayer" controls></video>
                     </div>
                     <div class="metadata-details">
                         <div class="meta-row">
@@ -163,7 +163,7 @@
                         </div>
                         <div class="meta-row">
                             <span class="meta-label">Original Duration:</span>
-                            <span class="meta-val" id="metaDuration" style="color: var(--accent); font-weight: 700;">-</span>
+                            <span class="meta-val" id="metaDuration" style="color: var(--primary); font-weight: 700;">-</span>
                         </div>
                         <div class="meta-row">
                             <span class="meta-label">Resolution & FPS:</span>
@@ -186,29 +186,29 @@
                         <div class="duration-chip" data-seconds="600">Comprehensive (~10 Mins)</div>
                         <div class="duration-chip" data-seconds="custom">Custom (MM:SS)</div>
                     </div>
-                    <div id="customDurationBox" style="display: none; margin-top: 0.8rem;">
-                        <input type="text" id="customDurationInput" placeholder="e.g. 03:30 or 210" style="background: rgba(13, 20, 36, 0.9); border: 1px solid var(--border-card); color: white; padding: 0.65rem 1rem; border-radius: 8px; font-size: 0.95rem; width: 220px; outline: none;">
-                        <span style="font-size: 0.85rem; color: var(--text-muted); margin-left: 0.5rem;">Enter duration in MM:SS or seconds</span>
+                    <div id="customDurationBox" class="custom-duration-box">
+                        <input type="text" id="customDurationInput" class="text-input-light custom-duration-input" placeholder="e.g. 03:30 or 210">
+                        <span class="custom-duration-hint">Enter duration in MM:SS or seconds</span>
                     </div>
                 </div>
 
                 <div class="options-group">
                     <label class="options-label">B. Summarization Algorithm Approach:</label>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
-                        <label style="background: rgba(13, 20, 36, 0.7); border: 1px solid var(--border-card); padding: 1rem 1.2rem; border-radius: 10px; cursor: pointer; color: white;">
-                            <input type="radio" name="summaryType" value="hybrid" checked style="accent-color: var(--primary);">
-                            <strong style="margin-left: 0.4rem;"> Hybrid (Recommended)</strong>
-                            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.3rem;">Extracts key source segments + Abstractive concise prose with timestamp mapping</div>
+                    <div class="algo-grid">
+                        <label class="algo-card">
+                            <input type="radio" name="summaryType" value="hybrid" checked>
+                            <strong style="margin-left: 0.35rem;">Hybrid (Recommended)</strong>
+                            <div class="algo-card-desc">Extracts key source segments + Abstractive concise prose with timestamp mapping</div>
                         </label>
-                        <label style="background: rgba(13, 20, 36, 0.7); border: 1px solid var(--border-card); padding: 1rem 1.2rem; border-radius: 10px; cursor: pointer; color: white;">
-                            <input type="radio" name="summaryType" value="extractive" style="accent-color: var(--primary);">
-                            <strong style="margin-left: 0.4rem;"> Extractive Only</strong>
-                            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.3rem;">Preserves original lecture spoken sentences verbatim</div>
+                        <label class="algo-card">
+                            <input type="radio" name="summaryType" value="extractive">
+                            <strong style="margin-left: 0.35rem;">Extractive Only</strong>
+                            <div class="algo-card-desc">Preserves original lecture spoken sentences verbatim</div>
                         </label>
-                        <label style="background: rgba(13, 20, 36, 0.7); border: 1px solid var(--border-card); padding: 1rem 1.2rem; border-radius: 10px; cursor: pointer; color: white;">
-                            <input type="radio" name="summaryType" value="abstractive" style="accent-color: var(--primary);">
-                            <strong style="margin-left: 0.4rem;"> Abstractive Transformer</strong>
-                            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.3rem;">Generates new concise academic summary sentences</div>
+                        <label class="algo-card">
+                            <input type="radio" name="summaryType" value="abstractive">
+                            <strong style="margin-left: 0.35rem;">Abstractive Transformer</strong>
+                            <div class="algo-card-desc">Generates new concise academic summary sentences</div>
                         </label>
                     </div>
                 </div>
@@ -226,15 +226,15 @@
 
                 <div class="options-group">
                     <label class="options-label">D. Subtitle / Caption Option:</label>
-                    <div style="display: flex; gap: 1.75rem; flex-wrap: wrap;">
-                        <label style="cursor: pointer; color: white; font-size: 0.92rem;">
-                            <input type="radio" name="captionOption" value="original" checked style="accent-color: var(--primary);"> Original Subtitles (.SRT file)
+                    <div class="caption-options-row">
+                        <label class="caption-option-label">
+                            <input type="radio" name="captionOption" value="original" checked> Original Subtitles (.SRT file)
                         </label>
-                        <label style="cursor: pointer; color: white; font-size: 0.92rem;">
-                            <input type="radio" name="captionOption" value="translated" style="accent-color: var(--primary);"> Translated Subtitles (.SRT file)
+                        <label class="caption-option-label">
+                            <input type="radio" name="captionOption" value="translated"> Translated Subtitles (.SRT file)
                         </label>
-                        <label style="cursor: pointer; color: white; font-size: 0.92rem;">
-                            <input type="radio" name="captionOption" value="none" style="accent-color: var(--primary);"> No Captions
+                        <label class="caption-option-label">
+                            <input type="radio" name="captionOption" value="none"> No Captions
                         </label>
                     </div>
                 </div>
@@ -247,10 +247,10 @@
             <!-- STEP 3: REAL-TIME SSE PROCESSING PIPELINE CARD -->
             <section class="glass-card processing-card" id="processingCard" style="display: none;">
                 <div class="progress-spinner"></div>
-                <h2 style="font-family: 'Outfit', sans-serif; font-size: 1.75rem; margin-bottom: 0.4rem;">AI is Analyzing Your Lecture</h2>
-                <p id="statusText" style="color: var(--text-secondary); font-size: 1.05rem; white-space: pre-line; line-height: 1.5; min-height: 3.2rem;">Initializing master AI processing pipeline...</p>
+                <h2 style="font-family: 'Outfit', sans-serif; font-size: 1.65rem; margin: 0 0 0.45rem 0; color: var(--text-main);">AI is Analyzing Your Lecture</h2>
+                <p id="statusText" style="color: var(--text-secondary); font-size: 1rem; white-space: pre-line; line-height: 1.5; min-height: 3rem; margin: 0;">Initializing master AI processing pipeline...</p>
                 
-                <div style="display: flex; justify-content: space-between; font-size: 0.9rem; color: var(--accent); margin-top: 1.25rem; margin-bottom: 0.3rem;">
+                <div style="display: flex; justify-content: space-between; font-size: 0.9rem; color: var(--primary); margin-top: 1.25rem; margin-bottom: 0.25rem;">
                     <span id="elapsedTimerText" style="font-weight: 600;">Elapsed: 0m 0s</span>
                     <span id="progressPctText" style="font-weight: 700;">0%</span>
                 </div>
@@ -309,10 +309,6 @@
         </main>
     </div>
 
-    <footer>
-        AI Lecture Summarizer &copy; 2026. Intelligent Academic Video Processing & Summarization System.
-    </footer>
-
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js', v='20261125') }}"></script>
 </body>
 </html>

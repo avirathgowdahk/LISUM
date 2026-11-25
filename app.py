@@ -31,6 +31,7 @@ app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_DIR
 app.config['OUTPUT_FOLDER'] = OUTPUT_DIR
 app.config['MAX_CONTENT_LENGTH'] = 2000 * 1024 * 1024  # Max 2GB upload limit
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
 # Global job dictionary
 JOBS = {}
@@ -154,4 +155,4 @@ if __name__ == '__main__':
     os.makedirs("outputs/subtitles", exist_ok=True)
 
     print("Starting Flask Web Application on http://127.0.0.1:5000")
-    app.run(host='127.0.0.1', port=5000, debug=False)
+    app.run(host='127.0.0.1', port=5000, debug=False, threaded=True)

@@ -2,7 +2,7 @@ import os
 import cv2
 from typing import Dict, Any
 
-ALLOWED_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv"}
+ALLOWED_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv", ".webm", ".flv", ".m4v"}
 
 def validate_video_file(video_path: str) -> None:
     """Check if the video file exists and has a supported extension."""

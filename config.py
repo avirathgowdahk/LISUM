@@ -10,7 +10,7 @@ MODEL_DIR = os.path.join(BASE_DIR, "models")
 FEATURE_DIR = os.path.join(BASE_DIR, "features")
 
 # Ensure required directories exist
-for directory in [UPLOAD_DIR, OUTPUT_DIR, MODEL_DIR, FEATURE_DIR]:
+for directory in [UPLOAD_DIR, OUTPUT_DIR, MODEL_DIR]:
     os.makedirs(directory, exist_ok=True)
 
 # Video Processing Configurations
